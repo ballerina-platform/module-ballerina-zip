@@ -115,18 +115,21 @@ public type Entry record {|
 
 ### 2.3. Compression method and level
 
-The library supports two compression methods.
+The library compresses with two methods, and names a third for what it finds.
 
 ```ballerina
 public enum CompressionMethod {
     STORE,
-    DEFLATE
+    DEFLATE,
+    OTHER
 }
 ```
 
 `STORE` means the entry is kept as it is, with no compression. `DEFLATE` means the entry is squeezed smaller. `DEFLATE` is what the library uses by default.
 
-Some zips contain entries compressed in older or unusual ways. Those archives can still be opened and listed. Reading or extracting such an entry returns an `UnsupportedEntryError`.
+Some zips contain entries compressed in older or unusual ways. Those archives can still be opened and listed, and such an entry is listed with its `method` as `OTHER`. Reading or extracting it returns an `UnsupportedEntryError`, while copying it into another archive works, since the content is never decoded. See [Section 5.3](#53-copying-entries-between-archives).
+
+`OTHER` is never written by this library, and it says only that the method is one this library does not decompress, not which method it is. An entry is listable in every case, so that an archive holding one such entry can still be read through and copied from.
 
 When creating an archive, you choose how hard to squeeze.
 
@@ -349,8 +352,9 @@ check writer.addFile("/etc/passwd", "/etc/passwd");   // UnsafePathError
 
 - When `includeSourceDirectory` is `true`, the folder itself becomes the top level. Adding `./reports` gives you entries named `reports/...`.
 - When it is `false`, the contents go straight into the top level of the zip.
+- An `entryName` you supply names the top level and settles the matter, whichever way the option is set: `addDirectory("./reports", "docs")` gives entries named `docs/...`. The option shapes only a call that names nothing, as `addFile` likewise stores under the name you give it.
 - Shortcuts and symbolic links **found inside the folder** are skipped. Neither the link nor the file it points to is stored.
-- An empty folder is recorded as a folder entry.
+- An empty folder is recorded as a folder entry wherever there is a top level to record it under, meaning `includeSourceDirectory` or an `entryName`. A call that names nothing with the option off has no such entry to add, and adds nothing.
 
 Links are skipped rather than followed because a link can point anywhere on the disk, and one pointing back up its own tree would make the walk endless.
 

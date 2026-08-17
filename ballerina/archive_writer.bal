@@ -48,7 +48,7 @@ public isolated class ArchiveWriter {
     # Adds a directory and everything inside it from the local file system.
     #
     # + sourcePath - Path of the directory to add
-    # + entryName - Name to store the directory under, defaulting to the directory name
+    # + entryName - Name for the top level of the added tree, overriding `includeSourceDirectory`
     # + return - `()` on success, or an error
     public isolated function addDirectory(string sourcePath, string? entryName = ()) returns Error? {
         // TODO: implement

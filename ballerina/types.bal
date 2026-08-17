@@ -21,7 +21,9 @@ public enum CompressionMethod {
     # Stored without compression
     STORE,
     # Compressed with the DEFLATE algorithm
-    DEFLATE
+    DEFLATE,
+    # Stored by a method this library cannot decompress
+    OTHER
 }
 
 # Level of compression applied when creating an archive.
