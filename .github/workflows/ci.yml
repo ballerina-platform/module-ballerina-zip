@@ -16,5 +16,3 @@ jobs:
     secrets: inherit
     with:
       repo-name: module-ballerina-zip
-      additional-build-flags: "-x :zip-examples:build"
-      additional-test-flags: "-x :zip-examples:test"
