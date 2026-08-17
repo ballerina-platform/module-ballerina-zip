@@ -17,13 +17,12 @@
 import ballerina/jballerina.java;
 
 # Represents an existing ZIP archive opened for reading.
-#
 # ```ballerina
 # zip:ArchiveReader archive = check new ("./reports.zip");
 # zip:Entry[] entries = check archive.entries();
 # check archive.close();
 # ```
-public isolated class ArchiveReader {
+public class ArchiveReader {
 
     private final handle archive;
 
