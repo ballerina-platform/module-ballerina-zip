@@ -26,6 +26,7 @@ public function main() returns error? {
     zip:ArchiveReader existing = check new (SOURCE);
     // The archive is written out afresh rather than changed in place: a ZIP keeps its index at the
     // end of the file, so an entry cannot be added to or removed from one that is already written.
+    // `overwrite` is set only so that the example can be run more than once.
     zip:ArchiveWriter rebuilt = check new (TARGET, {overwrite: true});
 
     foreach zip:Entry entry in check existing.entries() {
@@ -35,7 +36,8 @@ public function main() returns error? {
         }
         // The entry is carried across exactly as it is stored. Nothing is decompressed and
         // compressed again, so the content, method, timestamp and checksum all survive, and the
-        // `level` of this writer does not apply to it.
+        // `level` of this writer does not apply to it. A name is matched to the first entry that
+        // has it, so a malformed archive holding two entries under one name copies the first twice.
         check rebuilt.copyEntry(existing, entry.name);
         io:println("copied   ", entry.name, method(entry));
     }
@@ -45,6 +47,9 @@ public function main() returns error? {
     io:println("added    reports/release.txt");
 
     // The new archive is not a valid ZIP until the writer is closed, which is what writes its index.
+    // A rewrite that fails part way therefore leaves an unreadable file rather than a plausible
+    // archive with entries missing. Write to a temporary path and move it into place when the
+    // original has to survive a failure.
     check rebuilt.close();
     check existing.close();
 

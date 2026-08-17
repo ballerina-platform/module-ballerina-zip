@@ -18,8 +18,9 @@ import ballerina/io;
 import ballerina/zip;
 
 public function main() returns error? {
-    // What an archive from outside the system is allowed to cost. Every field is optional, and an
-    // absent one means no limit.
+    // What an archive from outside the system is allowed to cost. Refusing an entry that would be
+    // written outside the target directory is not configurable and always applies, but none of these
+    // limits do unless they are set: every field is optional, and an absent one means no limit.
     zip:DecompressOptions guarded = {
         fileWriteMode: zip:REPLACE,
         limits: {
@@ -33,12 +34,19 @@ public function main() returns error? {
         zip:Error? outcome = zip:decompress(string `./resources/${name}.zip`,
                 string `./unpacked/${name}`, guarded);
 
+        // Each guard has its own error type, so a hostile archive can be told from a broken one: a
+        // `zip:InvalidArchiveError` is not a ZIP file at all, and a `zip:UnsupportedEntryError` holds
+        // an entry that is encrypted or stored with a method the library does not read.
+        //
         // The limits are measured as the archive is read, so an entry that breaches one stops the
-        // extraction rather than being written and cleaned up afterwards.
+        // extraction where it is rather than being written out in full and cleaned up afterwards.
+        // What had been written of that entry stays on disk, which is why a caller taking in
+        // untrusted archives should discard the target directory on refusal rather than keep what
+        // got through.
         if outcome is zip:LimitExceededError {
             io:println(name, " refused: ", outcome.message());
         } else if outcome is zip:UnsafePathError {
-            // An entry named so that it would be written outside the target directory.
+            // Names the offending entry in `entryName`, as `zip:LimitExceededError` does.
             io:println(name, " refused: ", outcome.message());
         } else {
             check outcome;

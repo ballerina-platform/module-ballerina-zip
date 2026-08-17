@@ -73,8 +73,9 @@ bal run
 
 The `zip` library provides practical examples illustrating usage in various scenarios. Explore these [examples](https://github.com/ballerina-platform/module-ballerina-zip/tree/main/examples).
 
-1. [Unpack an archive you did not create](https://github.com/ballerina-platform/module-ballerina-zip/tree/main/examples/unpack-untrusted-archive) - Unpack an archive from outside the system under `ExtractionLimits`, and tell a hostile archive from a broken one.
-2. [Add to and remove from an archive](https://github.com/ballerina-platform/module-ballerina-zip/tree/main/examples/rewrite-an-archive) - Rewrite an archive with `copyEntry`, keeping the entries that stay exactly as they are stored.
+1. [Unpack an Untrusted Archive](https://github.com/ballerina-platform/module-ballerina-zip/tree/main/examples/unpack-untrusted-archive): Unpacks an archive that came from outside the system. Caps what the extraction is allowed to cost with `ExtractionLimits`, and tells a hostile archive from a broken one by the error type it gets back.
+
+2. [Rewrite an Archive](https://github.com/ballerina-platform/module-ballerina-zip/tree/main/examples/rewrite-an-archive): Adds an entry to and removes an entry from an archive, which a ZIP cannot do in place. Carries the entries that stay across with `copyEntry`, exactly as they are stored.
 
 ## Build from the source
 
