@@ -33,7 +33,7 @@ jobs:
 
       - name: Trigger Workflow
         run: |
-          curl --request POST \
+          curl --request POST --fail --connect-timeout 10 --max-time 60 \
           'https://api.github.com/repos/ballerina-platform/ballerina-dev-website/dispatches' \
           -H 'Accept: application/vnd.github.v3+json' \
           -H 'Authorization: Bearer ${{ secrets.BALLERINA_BOT_TOKEN }}' \

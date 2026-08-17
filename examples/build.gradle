@@ -58,7 +58,7 @@ task buildExamples {
                 workingDir project.projectDir
                 println("Working dir: ${workingDir}")
                 if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-                    commandLine 'bash', '-c', "${project.projectDir}/build.sh build"
+                    commandLine 'cmd', "/c", "build.bat build && exit %ERRORLEVEL%"
                 } else {
                     commandLine 'sh', "-c", "chmod +x ${project.projectDir}/build.sh && ${project.projectDir}/build.sh build"
                 }

@@ -37,18 +37,17 @@ BAL_PACKAGE_NAME=$(awk -F'"' '/^name/ {print $2}' "$BAL_HOME_DIR/Ballerina.toml"
 # Push the package to the local repository
 echo "Packing and pushing the Ballerina package..."
 cd "$BAL_HOME_DIR"
-bal pack
-bal push --repository=local
+bal pack || exit 1
+bal push --repository=local || exit 1
 
 # Remove cache directories in the central repository
 echo "Cleaning cache directories in the central repository..."
-cacheDirs=$(find "$BAL_CENTRAL_DIR" -type d -name "cache-*" 2>/dev/null) || true
-for dir in $cacheDirs; do
+while IFS= read -r -d '' dir; do
   if [[ -d "$dir" ]]; then
-    rm -r "$dir"
+    rm -rf -- "$dir"
     echo "Removed cache directory: $dir"
   fi
-done
+done < <(find "$BAL_CENTRAL_DIR" -type d -name "cache-*" -print0 2>/dev/null)
 echo "Successfully cleaned the cache directories."
 
 # Create the package directory in the central repository
@@ -72,14 +71,14 @@ echo "Destination Directory: $BAL_DESTINATION_DIR"
 # Loop through examples in the examples directory and execute the command
 echo "Processing examples in the examples directory..."
 cd "$BAL_EXAMPLES_DIR"
-for dir in $(find "$BAL_EXAMPLES_DIR" -type d -maxdepth 1 -mindepth 1); do
+while IFS= read -r -d '' dir; do
   # Skip the build directory
   if [[ "$(basename "$dir")" == "build" ]]; then
     continue
   fi
   echo "Processing example: $dir"
   (cd "$dir" && bal "$BAL_CMD")
-done
+done < <(find "$BAL_EXAMPLES_DIR" -mindepth 1 -maxdepth 1 -type d -print0)
 
 # Remove generated JAR files in the Ballerina home directory
 echo "Cleaning up generated JAR files..."

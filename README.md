@@ -116,7 +116,7 @@ For more information, go to the [contribution guidelines](https://github.com/bal
 
 ## Code of conduct
 
-All the contributors are encouraged to read the [Ballerina Code of Conduct](https://ballerina.io/code-of-conduct).
+All contributors are encouraged to read the [Ballerina Code of Conduct](https://ballerina.io/code-of-conduct).
 
 ## Useful links
 
