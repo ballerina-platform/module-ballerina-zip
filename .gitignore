@@ -1,24 +1,50 @@
 # Compiled class file
 *.class
-
 # Log file
 *.log
-
 # BlueJ files
 *.ctxt
-
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
-
 # Package Files #
 *.jar
+!gradle/wrapper/gradle-wrapper.jar
 *.war
 *.nar
 *.ear
 *.zip
+# The archives the tests read are fixtures, not build output, and are committed
+!ballerina/tests/archives/*.zip
 *.tar.gz
 *.rar
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
-replay_pid*
+
+build
+.gradle/
+target
+# IDEA Files
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# MacOS
+*.DS_Store
+
+# Ballerina
+velocity.log*
+
+# The Docker based build dumps the environment it hands the container here, packagePAT included
+docker.env
+
+# Auto generated Dependencies.toml files
+examples/**/Dependencies.toml
+load-tests/**/Dependencies.toml
+
+# IDE
+.vscode
+.classpath
+.project
+.settings/
