@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/file;
 import ballerina/io;
 import ballerina/zip;
 
@@ -31,26 +32,32 @@ public function main() returns error? {
     };
 
     foreach string name in ["reports", "bomb"] {
-        zip:Error? outcome = zip:decompress(string `./resources/${name}.zip`,
-                string `./unpacked/${name}`, guarded);
+        string target = string `./unpacked/${name}`;
+        zip:Error? outcome = zip:decompress(string `./resources/${name}.zip`, target, guarded);
 
         // Each guard has its own error type, so a hostile archive can be told from a broken one: a
         // `zip:InvalidArchiveError` is not a ZIP file at all, and a `zip:UnsupportedEntryError` holds
         // an entry that is encrypted or stored with a method the library does not read.
-        //
-        // The limits are measured as the archive is read, so an entry that breaches one stops the
-        // extraction where it is rather than being written out in full and cleaned up afterwards.
-        // What had been written of that entry stays on disk, which is why a caller taking in
-        // untrusted archives should discard the target directory on refusal rather than keep what
-        // got through.
         if outcome is zip:LimitExceededError {
+            check discardPartialOutput(target);
             io:println(name, " refused: ", outcome.message());
         } else if outcome is zip:UnsafePathError {
             // Names the offending entry in `entryName`, as `zip:LimitExceededError` does.
+            check discardPartialOutput(target);
             io:println(name, " refused: ", outcome.message());
         } else {
             check outcome;
-            io:println(name, " unpacked into ./unpacked/", name);
+            io:println(name, " unpacked into ", target);
         }
+    }
+}
+
+// The limits are measured as the archive is read, so an entry that breaches one stops the extraction
+// where it is rather than being written out in full and cleaned up afterwards. What had been written
+// of that entry stays on disk, so everything the refused extraction managed to write is thrown away
+// rather than left to be mistaken for a complete one.
+isolated function discardPartialOutput(string target) returns error? {
+    if check file:test(target, file:EXISTS) {
+        check file:remove(target, file:RECURSIVE);
     }
 }

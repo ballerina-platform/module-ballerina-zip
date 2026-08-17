@@ -72,5 +72,10 @@ isolated function method(zip:Entry entry) returns string {
     if entry.isDirectory {
         return " (directory)";
     }
-    return entry.method == zip:STORE ? " (stored)" : " (deflated)";
+    if entry.method == zip:STORE {
+        return " (stored)";
+    }
+    // `copyEntry` carries an entry across without reading it, so it can bring over one stored by a
+    // method this library cannot decompress. `Entry.method` reports those as `zip:OTHER`.
+    return entry.method == zip:DEFLATE ? " (deflated)" : " (other)";
 }
