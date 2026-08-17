@@ -25,12 +25,12 @@ import ballerina/file;
 # check writer.addFile("./summary.pdf");
 # check writer.close();
 # ```
-// Not `isolated`, which would say an instance may be shared. Writing one entry takes three calls
-// into the archive underneath, which holds one entry open at a time, and the sequence cannot be held
-// under a lock: Ballerina will not have the array or the stream the content comes from crossing into
-// a lock statement. The channels of `ballerina/io` are stateful in the same way and are not isolated
-// either. `ZipWriter` still owns the open entry, so sharing one writer regardless gives an error
-// rather than an archive quietly holding one entry's bytes inside another's.
+// Not `isolated`, which would say an instance may be shared across strands. Writing one entry takes
+// three calls into the archive underneath, which holds one entry open at a time, and the sequence
+// cannot be held under a lock: Ballerina will not have the array or the stream the content comes from
+// crossing into a lock statement. The channels of `ballerina/io` are stateful in the same way and
+// none of them is isolated either, so the promise is dropped rather than paid for. One writer belongs
+// to one strand, and nothing here tries to make sharing one work.
 public class ArchiveWriter {
 
     private final boolean includeSourceDirectory;
