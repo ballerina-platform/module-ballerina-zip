@@ -14,6 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/file;
+
 # Creates a ZIP archive from a file or a directory.
 #
 # ```ballerina
@@ -26,8 +28,36 @@
 # + return - `()` on success, or an error
 public isolated function compress(string sourcePath, string targetPath,
         CompressOptions options = {}) returns Error? {
-    // TODO: implement
-    return error Error("not implemented");
+    // Checked before the writer is created, since under `overwrite` creating it truncates whatever
+    // is at the target.
+    check verifyTargetOutsideSource(sourcePath, targetPath);
+    boolean directory = isDirectory(sourcePath);
+    ArchiveWriter writer = check new (targetPath, options);
+    Error? added = directory ? writer.addDirectory(sourcePath) : writer.addFile(sourcePath);
+    Error? closed = writer.close();
+    if added is Error {
+        return added;
+    }
+    return closed;
+}
+
+// Section 6: an archive created inside the directory being walked would end up holding a part of
+// itself, so such a call is refused before anything is written.
+isolated function verifyTargetOutsideSource(string sourcePath, string targetPath) returns Error? {
+    string resolvedSource = check realPath(sourcePath);
+    // A target that is already there is resolved outright, so that a link standing where the archive
+    // is to be written is judged by what it points at rather than by its own name. One that is not
+    // there yet cannot be resolved, so its name is taken against its resolved parent.
+    string resolvedTarget = pathExists(targetPath)
+        ? check realPath(targetPath)
+        : check joinPath(check realPath(check parentOf(targetPath)), check baseNameOf(targetPath));
+    if resolvedTarget == resolvedSource {
+        return error FileSystemError(string `the archive '${targetPath}' is the file being compressed`);
+    }
+    if resolvedTarget.startsWith(resolvedSource + file:pathSeparator) {
+        return error FileSystemError(string `the archive '${targetPath}' would be created inside '${sourcePath}'`);
+    }
+    return;
 }
 
 # Extracts every entry of a ZIP archive into a directory.
@@ -42,8 +72,13 @@ public isolated function compress(string sourcePath, string targetPath,
 # + return - `()` on success, or an error
 public isolated function decompress(string sourcePath, string targetPath,
         DecompressOptions options = {}) returns Error? {
-    // TODO: implement
-    return error Error("not implemented");
+    ArchiveReader reader = check new (sourcePath);
+    Error? result = reader.extractAll(targetPath, options);
+    Error? closed = reader.close();
+    if result is Error {
+        return result;
+    }
+    return closed;
 }
 
 # Lists the entries of a ZIP archive without extracting it.
@@ -51,6 +86,14 @@ public isolated function decompress(string sourcePath, string targetPath,
 # + path - Path of the ZIP file to read
 # + return - Metadata of every entry, in the order stored, or an error
 public isolated function listEntries(string path) returns Entry[]|Error {
-    // TODO: implement
-    return error Error("not implemented");
+    ArchiveReader reader = check new (path);
+    Entry[]|Error entries = reader.entries();
+    Error? closed = reader.close();
+    if entries is Error {
+        return entries;
+    }
+    if closed is Error {
+        return closed;
+    }
+    return entries;
 }

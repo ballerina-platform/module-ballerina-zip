@@ -16,3 +16,15 @@ groupId = "io.ballerina.lib.zip"
 artifactId = "zip-native"
 version = "@toml.version@"
 path = "../native/build/libs/zip-native-@project.version@.jar"
+
+[[platform.java21.dependency]]
+groupId = "org.apache.commons"
+artifactId = "commons-compress"
+version = "@commons.compress.version@"
+path = "./lib/commons-compress-@commons.compress.version@.jar"
+
+[[platform.java21.dependency]]
+groupId = "commons-io"
+artifactId = "commons-io"
+version = "@commons.io.version@"
+path = "./lib/commons-io-@commons.io.version@.jar"

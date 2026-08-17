@@ -18,4 +18,6 @@
 
 module io.ballerina.lib.zip {
     requires io.ballerina.runtime;
+    requires org.apache.commons.compress;
+    requires org.apache.commons.io;
 }

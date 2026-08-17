@@ -14,6 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/file;
+
 # Represents a new ZIP archive being created. Entries are written in the order
 # they are added, and the archive is completed by `close`.
 #
@@ -24,6 +26,9 @@
 # ```
 public isolated class ArchiveWriter {
 
+    private final boolean includeSourceDirectory;
+    private final handle writer;
+
     # Creates a new ZIP archive at the given path. A file already there is left as it is,
     # unless `overwrite` is set.
     #
@@ -31,8 +36,8 @@ public isolated class ArchiveWriter {
     # + options - Options controlling how the archive is created
     # + return - `()` on success, or an error
     public isolated function init(string path, CompressOptions options = {}) returns Error? {
-        // TODO: implement
-        return error Error("not implemented");
+        self.includeSourceDirectory = options.includeSourceDirectory;
+        self.writer = check nativeCreate(path, options.level, options.overwrite);
     }
 
     # Adds a file from the local file system.
@@ -41,8 +46,12 @@ public isolated class ArchiveWriter {
     # + entryName - Name to store the entry under, defaulting to the file name
     # + return - `()` on success, or an error
     public isolated function addFile(string sourcePath, string? entryName = ()) returns Error? {
-        // TODO: implement
-        return error Error("not implemented");
+        string name = entryName is string ? entryName : check baseNameOf(sourcePath);
+        check validateEntryName(name);
+        if isDirectory(sourcePath) {
+            return error FileSystemError(string `'${sourcePath}' is a directory; use 'addDirectory' for one`);
+        }
+        return nativeAddFile(self.writer, name, sourcePath);
     }
 
     # Adds a directory and everything inside it from the local file system.
@@ -51,8 +60,60 @@ public isolated class ArchiveWriter {
     # + entryName - Name for the top level of the added tree, overriding `includeSourceDirectory`
     # + return - `()` on success, or an error
     public isolated function addDirectory(string sourcePath, string? entryName = ()) returns Error? {
-        // TODO: implement
-        return error Error("not implemented");
+        if entryName is string {
+            check validateEntryName(entryName);
+        }
+        if !isDirectory(sourcePath) {
+            return error FileSystemError(string `no directory exists at '${sourcePath}'`);
+        }
+        // Section 5.2: a name given here settles the top level whichever way `includeSourceDirectory`
+        // is set, which only shapes a call that names nothing. Reading the option first instead would
+        // let a caller pass a name that silently did nothing.
+        string prefix = "";
+        if entryName is string {
+            prefix = trimTrailingSlash(entryName);
+        } else if self.includeSourceDirectory {
+            prefix = trimTrailingSlash(check baseNameOf(sourcePath));
+        }
+        if prefix != "" {
+            check validateEntryName(prefix);
+        }
+        return self.addTree(sourcePath, prefix);
+    }
+
+    // Adds a directory and what is under it, one level at a time. The directory itself is recorded
+    // only when it has a name in the archive, which is what leaves the contents of the source
+    // directory at the top level when nothing names it, and what leaves an empty one of those
+    // adding nothing at all. Links met on the way down
+    // are skipped rather than followed: a link can point anywhere, and one pointing up its own tree
+    // never ends. A `sourcePath` the caller names is used as given, links and all, since that path
+    // was their choice; only the ones found while walking are skipped.
+    isolated function addTree(string sourcePath, string prefix) returns Error? {
+        if prefix != "" {
+            check nativeAddFile(self.writer, prefix + "/", sourcePath);
+        }
+        file:MetaData[]|file:Error children = file:readDir(sourcePath);
+        if children is file:Error {
+            return error FileSystemError(string `the directory '${sourcePath}' could not be read`);
+        }
+        // Walked in name order, so that the same tree always gives the same archive.
+        file:MetaData[] ordered = from file:MetaData child in children
+            order by child.absPath
+            select child;
+        foreach file:MetaData child in ordered {
+            if isSymlink(child.absPath) {
+                continue;
+            }
+            string base = check baseNameOf(child.absPath);
+            string name = prefix == "" ? base : prefix + "/" + base;
+            check validateEntryName(name);
+            if child.dir {
+                check self.addTree(child.absPath, name);
+                continue;
+            }
+            check nativeAddFile(self.writer, name, child.absPath);
+        }
+        return;
     }
 
     # Adds an entry with the given content, supplied as a byte array or as a stream.
@@ -62,8 +123,53 @@ public isolated class ArchiveWriter {
     # + return - `()` on success, or an error
     public isolated function addEntry(string entryName,
             byte[]|stream<byte[], error?> content) returns Error? {
-        // TODO: implement
-        return error Error("not implemented");
+        check validateEntryName(entryName);
+        if content is byte[] {
+            check refuseContentForDirectory(entryName, content);
+            check nativeStartEntry(self.writer, entryName);
+            check self.writeChunk(content);
+            return nativeFinishEntry(self.writer);
+        }
+        // The first chunk is taken before the entry is opened, so that content given under a
+        // directory name is refused without an entry having been written for it, which is what the
+        // `byte[]` path above does.
+        record {|byte[] value;|}|error? first = content.next();
+        if first is error {
+            return error Error(string `the content given for entry '${entryName}' could not be read`, first);
+        }
+        if first is record {|byte[] value;|} {
+            check refuseContentForDirectory(entryName, first.value);
+        }
+        check nativeStartEntry(self.writer, entryName);
+        // The entry is finished whatever the content turns out to be, so that a writer whose caller
+        // carries on after an error is not left with an entry that was opened and never closed.
+        Error? written = self.writeStream(entryName, content, first);
+        Error? finished = nativeFinishEntry(self.writer);
+        if written is Error {
+            return written;
+        }
+        return finished;
+    }
+
+    isolated function writeStream(string entryName, stream<byte[], error?> content,
+            record {|byte[] value;|}? first) returns Error? {
+        record {|byte[] value;|}|error? chunk = first;
+        while chunk !is () {
+            if chunk is error {
+                return error Error(string `the content given for entry '${entryName}' could not be read`, chunk);
+            }
+            check refuseContentForDirectory(entryName, chunk.value);
+            check self.writeChunk(chunk.value);
+            chunk = content.next();
+        }
+        return;
+    }
+
+    isolated function writeChunk(byte[] chunk) returns Error? {
+        if chunk.length() == 0 {
+            return;
+        }
+        return nativeWriteChunk(self.writer, chunk);
     }
 
     # Copies an entry from another archive without decompressing it.
@@ -72,15 +178,33 @@ public isolated class ArchiveWriter {
     # + entryName - Name of the entry within the source archive
     # + return - `()` on success, or an error
     public isolated function copyEntry(ArchiveReader sourceArchive, string entryName) returns Error? {
-        // TODO: implement
-        return error Error("not implemented");
+        // The name is checked here as well, so that a name this library refuses to extract is not
+        // written into a new archive by way of a copy.
+        check validateEntryName(entryName);
+        return nativeCopyEntry(self.writer, sourceArchive.openArchive(), entryName);
     }
 
     # Completes the archive and closes the underlying file.
     #
     # + return - `()` on success, or an error
     public isolated function close() returns Error? {
-        // TODO: implement
-        return error Error("not implemented");
+        return nativeCloseWriter(self.writer);
     }
+}
+
+// A name ending in `/` is a directory entry, which section 7.2 says holds nothing. Content given for
+// one is refused rather than written, which would leave an entry saying it is a directory and holding
+// bytes all the same. An empty array is how an empty directory is recorded.
+isolated function refuseContentForDirectory(string entryName, byte[] content) returns Error? {
+    if content.length() > 0 && entryName.endsWith("/") {
+        return error Error(string `entry '${entryName}' names a directory, which holds no content`);
+    }
+    return;
+}
+
+isolated function trimTrailingSlash(string name) returns string {
+    if name.endsWith("/") {
+        return name.substring(0, name.length() - 1);
+    }
+    return name;
 }
