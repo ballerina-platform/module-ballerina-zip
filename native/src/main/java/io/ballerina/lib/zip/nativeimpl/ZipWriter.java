@@ -35,6 +35,13 @@ import java.util.zip.ZipException;
 /**
  * One ZIP file being written, and the compression the caller asked for. Names arrive already checked
  * and already in the form they are stored in; a name ending in {@code /} is a directory entry.
+ *
+ * <p>Nothing here is synchronized. {@code ArchiveWriter} is not an isolated class, so isolated code
+ * cannot share one writer and no two strands reach this object through it. Locking each call would
+ * not have made a shared writer safe in any case: one entry is written by three calls to
+ * {@code out}, which holds a single entry open at a time, so it is the sequence rather than the
+ * single call that would have to be held. {@link ZipArchive} is synchronized, because
+ * {@code ArchiveReader} is an isolated class and two strands may reach one of those.
  */
 final class ZipWriter {
 
@@ -64,7 +71,7 @@ final class ZipWriter {
         out.setLevel(deflateLevel(level));
     }
 
-    synchronized boolean isClosed() {
+    boolean isClosed() {
         return closed;
     }
 
@@ -72,7 +79,7 @@ final class ZipWriter {
      * Writes an entry holding the content of a file, or a directory entry when the name ends in
      * {@code /}. The time and, where the platform has them, the permissions come from the source.
      */
-    synchronized void addFile(Path source, String entryName) throws IOException {
+    void addFile(Path source, String entryName) throws IOException {
         BasicFileAttributes attributes = Files.readAttributes(source, BasicFileAttributes.class);
         ZipArchiveEntry entry = new ZipArchiveEntry(entryName);
         entry.setTime(attributes.lastModifiedTime());
@@ -101,7 +108,7 @@ final class ZipWriter {
      * Opens an entry whose content the caller writes in chunks. The time is the current one, since
      * there is no source file to take one from.
      */
-    synchronized void startEntry(String entryName) throws IOException {
+    void startEntry(String entryName) throws IOException {
         ZipArchiveEntry entry = new ZipArchiveEntry(entryName);
         entry.setTime(System.currentTimeMillis());
         if (entry.isDirectory()) {
@@ -113,11 +120,11 @@ final class ZipWriter {
         out.putArchiveEntry(entry);
     }
 
-    synchronized void writeChunk(byte[] chunk) throws IOException {
+    void writeChunk(byte[] chunk) throws IOException {
         out.write(chunk, 0, chunk.length);
     }
 
-    synchronized void finishEntry() throws IOException {
+    void finishEntry() throws IOException {
         out.closeArchiveEntry();
     }
 
@@ -125,7 +132,7 @@ final class ZipWriter {
      * Writes the entry at the given position of another archive as it is stored there. The bytes are
      * copied still compressed, so an entry this library cannot decompress can be copied all the same.
      */
-    synchronized void copyEntry(ZipArchive source, int index) throws IOException {
+    void copyEntry(ZipArchive source, int index) throws IOException {
         ZipArchiveEntry entry = source.entryAt(index);
         InputStream raw = source.rawContentOf(entry);
         if (raw == null) {
@@ -138,7 +145,7 @@ final class ZipWriter {
         }
     }
 
-    synchronized void close() throws IOException {
+    void close() throws IOException {
         if (closed) {
             return;
         }
