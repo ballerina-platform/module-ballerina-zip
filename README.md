@@ -5,7 +5,7 @@
 [![Trivy](https://github.com/ballerina-platform/module-ballerina-zip/actions/workflows/trivy-scan.yml/badge.svg)](https://github.com/ballerina-platform/module-ballerina-zip/actions/workflows/trivy-scan.yml)
 [![GraalVM Check](https://github.com/ballerina-platform/module-ballerina-zip/actions/workflows/build-with-bal-test-native.yml/badge.svg)](https://github.com/ballerina-platform/module-ballerina-zip/actions/workflows/build-with-bal-test-native.yml)
 [![GitHub Last Commit](https://img.shields.io/github/last-commit/ballerina-platform/module-ballerina-zip.svg)](https://github.com/ballerina-platform/module-ballerina-zip/commits/main)
-[![GitHub Issues](https://img.shields.io/github/issues/ballerina-platform/module-ballerina-zip.svg?label=Open%20Issues)](https://github.com/ballerina-platform/module-ballerina-zip/issues)
+[![GitHub Issues](https://img.shields.io/github/issues/ballerina-platform/ballerina-library/module/zip.svg?label=Open%20Issues)](https://github.com/ballerina-platform/ballerina-library/labels/module%2Fzip)
 
 ## Overview
 
