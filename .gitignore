@@ -35,7 +35,6 @@ target
 
 # Ballerina
 velocity.log*
-*Ballerina.lock
 
 # The Docker based build dumps the environment it hands the container here, packagePAT included
 docker.env
@@ -44,18 +43,8 @@ docker.env
 examples/**/Dependencies.toml
 load-tests/**/Dependencies.toml
 
-# VSCode
+# IDE
 .vscode
+.classpath
 .project
 .settings/
-ballerina/.project
-ballerina/.settings/
-build-config/checkstyle/.classpath
-build-config/checkstyle/.project
-build-config/checkstyle/.settings/
-native/.classpath
-native/.project
-native/.settings/
-test-utils/.classpath
-test-utils/.project
-test-utils/.settings/
