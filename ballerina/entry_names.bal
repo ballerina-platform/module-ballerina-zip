@@ -35,6 +35,13 @@ isolated function validateEntryName(string name) returns Error? {
         return error UnsafePathError(string `entry '${name}' has a name starting with a drive letter`,
                 entryName = name);
     }
+    // A ':' names a drive at the start of a name and an alternate data stream anywhere else, so it is
+    // refused wherever it appears. Opening 'notes.txt:evil' on NTFS writes a stream of 'notes.txt'
+    // rather than a file of that name, which puts the content somewhere the caller cannot see it.
+    if name.includes(":") {
+        return error UnsafePathError(string `the name of entry '${name}' holds a ':', which is never allowed`,
+                entryName = name);
+    }
     foreach string segment in segmentsOf(name) {
         if segment == "." || segment == ".." {
             return error UnsafePathError(string `the name of entry '${name}' holds a '${segment}' part`,

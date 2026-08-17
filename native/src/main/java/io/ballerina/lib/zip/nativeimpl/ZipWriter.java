@@ -87,8 +87,14 @@ final class ZipWriter {
         entry.setMethod(method);
         entry.setSize(attributes.size());
         out.putArchiveEntry(entry);
-        Files.copy(source, out);
-        out.closeArchiveEntry();
+        // The entry is closed whatever the copy does. An entry left open is one the central directory
+        // cannot be written after, so a file that could not be read would cost the whole archive
+        // rather than the one entry.
+        try {
+            Files.copy(source, out);
+        } finally {
+            out.closeArchiveEntry();
+        }
     }
 
     /**

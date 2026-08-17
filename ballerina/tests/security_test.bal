@@ -88,6 +88,24 @@ isolated function testBackslashInAnEntryNameWrittenOnWindows() returns error? {
 }
 
 @test:Config {}
+isolated function testColonPastTheStartOfAnEntryName() returns error? {
+    string target = check file:createTempDir();
+    ArchiveReader reader = check new (DATA_STREAM_ARCHIVE);
+    // A ':' anywhere but the start is not a drive letter, so the name reaches the general rule of
+    // section 7.1. On NTFS it would write a stream of 'notes.txt' rather than a file of its own.
+    Error? result = reader.extractAll(target);
+    check reader.close();
+    if result is UnsafePathError {
+        test:assertEquals(result.detail().entryName, "notes.txt:evil");
+    } else {
+        test:assertFail("an entry name holding a ':' must give an UnsafePathError");
+    }
+    test:assertFalse(check file:test(check file:joinPath(target, "notes.txt"), file:EXISTS),
+            "nothing may be written for a name holding a ':'");
+    check file:remove(target, file:RECURSIVE);
+}
+
+@test:Config {}
 isolated function testDotSegmentInEntryName() returns error? {
     string target = check file:createTempDir();
     ArchiveReader reader = check new (DOT_SEGMENT_ARCHIVE);

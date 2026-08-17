@@ -140,8 +140,14 @@ public class ArchiveWriter {
         if content is byte[] {
             check refuseContentForDirectory(entryName, content);
             check nativeStartEntry(self.writer, entryName);
-            check self.writeChunk(content);
-            return nativeFinishEntry(self.writer);
+            // Finished whichever way the writing goes, as in `addStreamEntry`, since an entry left
+            // open is one the archive cannot be completed after.
+            Error? written = self.writeChunk(content);
+            Error? finished = nativeFinishEntry(self.writer);
+            if written is Error {
+                return written;
+            }
+            return finished;
         }
         // The stream is driven from here, so the caller has no way of knowing how far it was read and
         // cannot be the one to close it. It is closed on the way out whatever happened, and the error

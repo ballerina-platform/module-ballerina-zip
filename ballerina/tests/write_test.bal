@@ -63,6 +63,17 @@ isolated function testAddFileNamesTheEntryAfterTheFile() returns error? {
 }
 
 @test:Config {}
+isolated function testAPathThePlatformCannotRepresentGivesAnError() returns error? {
+    // A zero byte cannot appear in a path on any platform this runs on. The path is turned into one
+    // of the platform inside the native code, which fails for this string; that has to come back as
+    // an error rather than as a panic.
+    ArchiveWriter|Error writer = new ("a\u{0000}b.zip");
+    test:assertTrue(writer is FileSystemError,
+            "a path the platform cannot represent must give a FileSystemError");
+    return;
+}
+
+@test:Config {}
 isolated function testUnsafeEntryNamesAreRefused() returns error? {
     string work = check file:createTempDir();
     string archivePath = check file:joinPath(work, "out.zip");
@@ -74,6 +85,7 @@ isolated function testUnsafeEntryNamesAreRefused() returns error? {
         "../evil.txt",
         "docs/../evil.txt",
         "a\\b.txt",
+        "notes.txt:evil",
         "docs/./report.txt",
         ""
     ];

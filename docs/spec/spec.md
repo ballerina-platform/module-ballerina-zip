@@ -109,7 +109,7 @@ public type Entry record {|
 | `comment` | Present only if the entry carries a comment |
 | `unixMode` | Present only if the archive records Unix permissions |
 
-`modifiedTime` is accurate to two seconds, which is all the format stores by default; archives that record a more precise time report that instead.
+`modifiedTime` is accurate to two seconds, which is all the format stores by default; archives that record a more precise time report that instead. An entry recording no time at all, and one recording a time before the epoch, both report the epoch.
 
 `unixMode` reports the mode as the archive records it, including the setuid, setgid and sticky bits. It excludes the bits saying what kind of file it is, which is why `isSymlink` is a separate field. A symbolic link entry is visible when listing but cannot be extracted, per [Section 4.4](#44-extracting).
 
@@ -343,7 +343,7 @@ Entries are written in the order you add them.
 
 `addFile` reads a file from disk. If you do not give an `entryName`, the file name is used on its own, without the folders above it.
 
-Which files you may read is not restricted; file permissions are the file system's business. A supplied `entryName` must obey [Section 7.1](#71-separator-and-normalization) — absolute, drive-lettered, `..`-containing and `\`-containing names give an `UnsafePathError` rather than being silently corrected.
+Which files you may read is not restricted; file permissions are the file system's business. A supplied `entryName` must obey [Section 7.1](#71-separator-and-normalization) — absolute, drive-lettered, `..`-containing, `\`-containing and `:`-containing names give an `UnsafePathError` rather than being silently corrected.
 
 ```ballerina
 check writer.addFile("/etc/passwd");                  // stored as "passwd"
@@ -417,6 +417,8 @@ Names inside a zip always use `/` to separate folders, on every platform. This i
 Names inside a zip are always relative. The library never writes a name that starts at the root of the disk, that starts with a drive letter, or that contains a `.` or `..` part.
 
 A `\` is never allowed in a name, in either direction: writing one is refused, and an archive containing one is refused when extracted. A name like `..\..\x` is an ordinary Linux filename but escapes the target folder on Windows.
+
+A `:` is refused the same way, wherever in the name it appears. It names a drive at the start, and anywhere else it names an alternate data stream: extracting `notes.txt:evil` on NTFS writes a stream of `notes.txt` instead of a file of that name, leaving the content somewhere the caller does not see. Both are ordinary Linux filenames, as `..\..\x` is.
 
 Names are compared exactly, including case. A zip may hold two names differing only in case; on Windows and macOS the second lands on the file the first wrote, so `fileWriteMode` decides the outcome.
 

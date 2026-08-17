@@ -90,6 +90,12 @@ def fat_backslash(archive):
     archive.writestr(entry("a\\b.txt", system=0), "windows\n")
 
 
+def data_stream(archive):
+    # A ':' past the start of the name. On NTFS this names an alternate data stream of 'notes.txt'
+    # rather than a file of its own, so section 7.1 refuses the name wherever the ':' sits.
+    archive.writestr(entry("notes.txt:evil"), "hidden\n")
+
+
 def dot_segment(archive):
     archive.writestr(entry("docs/./report.txt"), "dot\n")
 
@@ -216,6 +222,7 @@ def main():
     write("absolute.zip", absolute)
     write("backslash.zip", backslash)
     write("fat-backslash.zip", fat_backslash)
+    write("data-stream.zip", data_stream)
     write("dot-segment.zip", dot_segment)
     write("bomb.zip", bomb)
     write("lying-size.zip", lying_size)

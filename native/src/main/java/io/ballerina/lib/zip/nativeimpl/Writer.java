@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
 /**
@@ -45,7 +44,10 @@ public final class Writer {
 
     public static Object nativeCreate(BString path, BString level, boolean overwrite) {
         String target = path.getValue();
-        Path file = Paths.get(target);
+        Path file = FileSystem.pathOf(target);
+        if (file == null) {
+            return FileSystem.unrepresentablePath(target);
+        }
         if (Files.isDirectory(file)) {
             return ZipErrors.fileSystem("'" + target + "' is a directory, not a path a ZIP file can be written to");
         }
@@ -76,7 +78,10 @@ public final class Writer {
             return closedArchive();
         }
         String source = sourcePath.getValue();
-        Path file = Paths.get(source);
+        Path file = FileSystem.pathOf(source);
+        if (file == null) {
+            return FileSystem.unrepresentablePath(source);
+        }
         if (!Files.exists(file)) {
             return ZipErrors.fileSystem("no file exists at '" + source + "'");
         }

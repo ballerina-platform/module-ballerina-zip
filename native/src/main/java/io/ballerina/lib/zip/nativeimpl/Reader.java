@@ -47,8 +47,8 @@ import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.FileTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -130,10 +130,12 @@ public final class Reader {
         if (zipArchive.isClosed()) {
             return closedArchive();
         }
-        int position = (int) index;
-        if (position < 0 || position >= zipArchive.size()) {
+        // The bounds are checked before the cast, as in `nativeExtractEntry`: a Ballerina `int` is 64
+        // bits, and narrowing first would let a value whose low 32 bits land inside the archive pass.
+        if (index < 0 || index >= zipArchive.size()) {
             return ZipErrors.invalidArchive("the archive holds no entry at position " + index);
         }
+        int position = (int) index;
         return toEntryRecord(zipArchive.entryAt(position), zipArchive.nameAt(position));
     }
 
@@ -209,7 +211,10 @@ public final class Reader {
         if (unreadable != null) {
             return unreadable;
         }
-        Path target = Paths.get(targetPath.getValue());
+        Path target = FileSystem.pathOf(targetPath.getValue());
+        if (target == null) {
+            return FileSystem.unrepresentablePath(targetPath.getValue());
+        }
         try (InputStream content = zipArchive.contentOf(entry)) {
             return copy(content, target, entryName, byteLimit, maxCompressionRatio);
         } catch (IOException e) {
@@ -384,17 +389,24 @@ public final class Reader {
     }
 
     private static BArray utcOf(ZipArchiveEntry entry) {
-        long millis = entry.getTime();
-        if (millis < 0) {
-            millis = 0;
-        }
-        long seconds = Math.floorDiv(millis, 1000L);
-        long nanos = Math.floorMod(millis, 1000L) * 1_000_000L;
-        if (entry.getLastModifiedTime() != null) {
+        long seconds;
+        long nanos;
+        FileTime precise = entry.getLastModifiedTime();
+        if (precise != null) {
             // An archive recording a more precise time than the two seconds of the format reports it.
-            long preciseNanos = entry.getLastModifiedTime().to(TimeUnit.NANOSECONDS);
+            long preciseNanos = precise.to(TimeUnit.NANOSECONDS);
             seconds = Math.floorDiv(preciseNanos, 1_000_000_000L);
             nanos = Math.floorMod(preciseNanos, 1_000_000_000L);
+        } else {
+            long millis = entry.getTime();
+            seconds = Math.floorDiv(millis, 1000L);
+            nanos = Math.floorMod(millis, 1000L) * 1_000_000L;
+        }
+        // Either way of recording a time can give one before the epoch, and `getTime` gives -1 for an
+        // entry recording none at all. Both read as the epoch, so that the two agree.
+        if (seconds < 0) {
+            seconds = 0;
+            nanos = 0;
         }
         // `time:Utc` is a readonly tuple, so both members are given at creation; a readonly value
         // cannot be filled in afterwards.

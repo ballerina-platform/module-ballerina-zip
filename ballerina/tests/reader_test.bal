@@ -27,6 +27,7 @@ const string TRAVERSAL_ARCHIVE = ARCHIVES + "/traversal.zip";
 const string ABSOLUTE_ARCHIVE = ARCHIVES + "/absolute.zip";
 const string BACKSLASH_ARCHIVE = ARCHIVES + "/backslash.zip";
 const string FAT_BACKSLASH_ARCHIVE = ARCHIVES + "/fat-backslash.zip";
+const string DATA_STREAM_ARCHIVE = ARCHIVES + "/data-stream.zip";
 const string DOT_SEGMENT_ARCHIVE = ARCHIVES + "/dot-segment.zip";
 const string BOMB_ARCHIVE = ARCHIVES + "/bomb.zip";
 const string LYING_SIZE_ARCHIVE = ARCHIVES + "/lying-size.zip";

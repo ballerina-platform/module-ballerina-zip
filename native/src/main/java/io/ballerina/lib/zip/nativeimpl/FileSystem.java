@@ -23,8 +23,11 @@ import io.ballerina.runtime.api.values.BString;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
+import java.time.DateTimeException;
 import java.time.Instant;
 
 /**
@@ -42,8 +45,12 @@ public final class FileSystem {
      * {@code SYMLINK} normalization reads the target of a link and fails on a path that is not one.
      */
     public static Object nativeRealPath(BString path) {
+        Path file = pathOf(path.getValue());
+        if (file == null) {
+            return unrepresentablePath(path.getValue());
+        }
         try {
-            return StringUtils.fromString(Paths.get(path.getValue()).toRealPath().toString());
+            return StringUtils.fromString(file.toRealPath().toString());
         } catch (IOException | SecurityException e) {
             return ZipErrors.fileSystem("the path '" + path.getValue() + "' could not be resolved");
         }
@@ -55,8 +62,16 @@ public final class FileSystem {
      * resolve between them, so the file system is asked directly.
      */
     public static Object nativeIsSameFile(BString first, BString second) {
+        Path one = pathOf(first.getValue());
+        Path other = pathOf(second.getValue());
+        if (one == null) {
+            return unrepresentablePath(first.getValue());
+        }
+        if (other == null) {
+            return unrepresentablePath(second.getValue());
+        }
         try {
-            return Files.isSameFile(Paths.get(first.getValue()), Paths.get(second.getValue()));
+            return Files.isSameFile(one, other);
         } catch (IOException | SecurityException e) {
             return ZipErrors.fileSystem(
                     "'" + first.getValue() + "' and '" + second.getValue() + "' could not be compared");
@@ -68,11 +83,31 @@ public final class FileSystem {
      * reported, since the content of the file is already written by then.
      */
     public static void nativeSetModifiedTime(BString path, long seconds, long nanos) {
-        try {
-            Files.setLastModifiedTime(Paths.get(path.getValue()),
-                    FileTime.from(Instant.ofEpochSecond(seconds, nanos)));
-        } catch (IOException | UnsupportedOperationException | IllegalArgumentException e) {
-            // A platform that cannot store a modified time leaves the file with the one it has.
+        Path file = pathOf(path.getValue());
+        if (file == null) {
+            return;
         }
+        try {
+            Files.setLastModifiedTime(file, FileTime.from(Instant.ofEpochSecond(seconds, nanos)));
+        } catch (IOException | UnsupportedOperationException | IllegalArgumentException
+                | DateTimeException | ArithmeticException e) {
+            // A platform that cannot store a modified time leaves the file with the one it has, and so
+            // does a time too far from the epoch for the platform to hold.
+        }
+    }
+
+    // The path a string names, or `null` when the platform cannot represent it, such as a string
+    // holding a zero byte. `Paths.get` throws an unchecked `InvalidPathException` for one of those,
+    // which would panic the strand instead of reaching the caller as a `FileSystemError`.
+    static Path pathOf(String path) {
+        try {
+            return Paths.get(path);
+        } catch (InvalidPathException e) {
+            return null;
+        }
+    }
+
+    static Object unrepresentablePath(String path) {
+        return ZipErrors.fileSystem("'" + path + "' is not a path this platform can represent");
     }
 }
