@@ -1,8 +1,9 @@
 # Examples
 
-The `ballerina/zip` connector provides practical examples illustrating usage in various scenarios. Explore these [examples](https://github.com/ballerina-platform/module-ballerina-zip/tree/main/examples).
+The `zip` library provides practical examples illustrating usage in various scenarios. Explore these [examples](https://github.com/ballerina-platform/module-ballerina-zip/tree/main/examples).
 
-[//]: # (TODO: Add examples)
+1. [Unpack an archive you did not create](unpack-untrusted-archive) - Unpack an archive from outside the system under `ExtractionLimits`, and tell a hostile archive from a broken one.
+2. [Add to and remove from an archive](rewrite-an-archive) - Rewrite an archive with `copyEntry`, keeping the entries that stay exactly as they are stored.
 
 ## Prerequisites
 

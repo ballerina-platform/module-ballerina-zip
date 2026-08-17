@@ -15,6 +15,8 @@
 *.zip
 # The archives the tests read are fixtures, not build output, and are committed
 !ballerina/tests/archives/*.zip
+# So are the ones an example reads
+!examples/**/resources/*.zip
 # The native-image metadata sits in a directory named for the module, which `*.zip` above matches as
 # a directory. Everything under it is excluded with it, and a file cannot be excepted while a parent
 # directory of it is, so the directory itself has to be excepted here.
@@ -42,6 +44,9 @@ velocity.log*
 
 # The Docker based build dumps the environment it hands the container here, packagePAT included
 docker.env
+
+# What an example writes when it is run (the archive it writes is already covered by `*.zip`)
+examples/**/unpacked/
 
 # Auto generated Dependencies.toml files
 examples/**/Dependencies.toml
