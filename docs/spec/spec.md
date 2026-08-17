@@ -109,7 +109,7 @@ public type Entry record {|
 | `comment` | Present only if the entry carries a comment |
 | `unixMode` | Present only if the archive records Unix permissions |
 
-`modifiedTime` is accurate to two seconds, which is all the format stores by default; archives that record a more precise time report that instead.
+`modifiedTime` is accurate to two seconds, which is all the format stores by default; archives that record a more precise time report that instead. An entry recording no time at all, and one recording a time before the epoch, both report the epoch.
 
 `unixMode` reports the mode as the archive records it, including the setuid, setgid and sticky bits. It excludes the bits saying what kind of file it is, which is why `isSymlink` is a separate field. A symbolic link entry is visible when listing but cannot be extracted, per [Section 4.4](#44-extracting).
 
@@ -277,6 +277,8 @@ public enum FileWriteMode {
 
 The mode applies to files only. Existing folders are always reused, in every mode.
 
+A file entry whose target is an existing folder is a different matter, and gives a `FileSystemError` whatever the mode says. There is no file there for the mode to answer for, and the folder is not something any mode may take away.
+
 Both functions apply the name checks in [Section 8.1](#81-unsafe-entry-names). `extractAll` also applies the limits in [Section 8.2](#82-extraction-limits).
 
 If extraction fails halfway, files already written are left in place; nothing is cleaned up. For all-or-nothing behaviour, extract into a temporary folder and move it once it succeeds.
@@ -341,7 +343,7 @@ Entries are written in the order you add them.
 
 `addFile` reads a file from disk. If you do not give an `entryName`, the file name is used on its own, without the folders above it.
 
-Which files you may read is not restricted; file permissions are the file system's business. A supplied `entryName` must obey [Section 7.1](#71-separator-and-normalization) — absolute, drive-lettered, `..`-containing and `\`-containing names give an `UnsafePathError` rather than being silently corrected.
+Which files you may read is not restricted; file permissions are the file system's business. A supplied `entryName` must obey [Section 7.1](#71-separator-and-normalization) — absolute, drive-lettered, `..`-containing, `\`-containing and `:`-containing names give an `UnsafePathError` rather than being silently corrected.
 
 ```ballerina
 check writer.addFile("/etc/passwd");                  // stored as "passwd"
@@ -361,6 +363,10 @@ Links are skipped rather than followed because a link can point anywhere on the 
 A `sourcePath` you name yourself is a different matter, and is used as given: if it is a link to a folder, that folder is the one added, and the same holds for `addFile` and for `compress`. You chose that path, so it is followed; the links met on the way down were chosen by whoever laid out the disk, so they are not.
 
 `addEntry` adds an entry whose content you supply rather than read from disk. `entryName` is required.
+
+When the content is a stream, `addEntry` reads it and closes it, on a refusal as much as on a success. It has to: it decides how much of the stream to read, so you could not know where it stopped.
+
+A name ending in `/` records a folder, which holds nothing, so `addFile` refuses one rather than writing an empty folder entry and dropping the content of the file. `addEntry` refuses content given under such a name for the same reason.
 
 The timestamp is the source file's last modified time for `addFile` and `addDirectory`, and the current time for `addEntry`. On Unix-like systems, `addFile` and `addDirectory` also record the source permissions.
 
@@ -411,6 +417,8 @@ Names inside a zip always use `/` to separate folders, on every platform. This i
 Names inside a zip are always relative. The library never writes a name that starts at the root of the disk, that starts with a drive letter, or that contains a `.` or `..` part.
 
 A `\` is never allowed in a name, in either direction: writing one is refused, and an archive containing one is refused when extracted. A name like `..\..\x` is an ordinary Linux filename but escapes the target folder on Windows.
+
+A `:` is refused the same way, wherever in the name it appears. It names a drive at the start, and anywhere else it names an alternate data stream: extracting `notes.txt:evil` on NTFS writes a stream of `notes.txt` instead of a file of that name, leaving the content somewhere the caller does not see. Both are ordinary Linux filenames, as `..\..\x` is.
 
 Names are compared exactly, including case. A zip may hold two names differing only in case; on Windows and macOS the second lands on the file the first wrote, so `fileWriteMode` decides the outcome.
 

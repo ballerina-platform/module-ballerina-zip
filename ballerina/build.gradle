@@ -59,12 +59,22 @@ configurations {
 dependencies {
     // Declare the third-party JARs bundled with the package here, and add a matching
     // `[[platform.java21.dependency]]` entry in `build-config/resources/Ballerina.toml`.
+    externalJars(group: 'org.apache.commons', name: 'commons-compress', version: "${commonsCompressVersion}") {
+        transitive = false
+    }
+    externalJars(group: 'commons-io', name: 'commons-io', version: "${commonsIoVersion}") {
+        transitive = false
+    }
 }
 
 task updateTomlFiles {
     doLast {
         def newBallerinaToml = ballerinaTomlFilePlaceHolder.text.replace("@project.version@", project.version)
         newBallerinaToml = newBallerinaToml.replace("@toml.version@", tomlVersion)
+        // The versions of the bundled JARs come from `gradle.properties`, the same place the
+        // `externalJars` configuration reads them from, so the two cannot drift apart.
+        newBallerinaToml = newBallerinaToml.replace("@commons.compress.version@", "${commonsCompressVersion}")
+        newBallerinaToml = newBallerinaToml.replace("@commons.io.version@", "${commonsIoVersion}")
 
         ballerinaTomlFile.text = newBallerinaToml
     }
