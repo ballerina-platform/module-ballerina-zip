@@ -17,16 +17,16 @@
 import ballerina/file;
 
 // Passed to `nativeExtractEntry` when nothing caps the bytes an entry may write.
-const int NO_BYTE_LIMIT = -1;
+const NO_BYTE_LIMIT = -1;
 
 // Passed to `nativeExtractEntry` when nothing caps how far an entry may expand.
-const int NO_RATIO_LIMIT = 0;
+const NO_RATIO_LIMIT = 0;
 
 // What `nativeExtractEntry` gives back in place of a byte count when a limit stops the write.
-const int BYTES_EXCEEDED = -1;
-const int RATIO_EXCEEDED = -2;
+const BYTES_EXCEEDED = -1;
+const RATIO_EXCEEDED = -2;
 
-const int NANOS_PER_SECOND = 1000000000;
+const NANOS_PER_SECOND = 1000000000;
 
 isolated function validateLimits(ExtractionLimits limits) returns Error? {
     int? maxEntries = limits.maxEntries;
@@ -148,13 +148,4 @@ isolated function symlinkError(string name) returns UnsupportedEntryError {
 isolated function applyModifiedTime(string path, Entry entry) {
     [int, decimal] modified = entry.modifiedTime;
     nativeSetModifiedTime(path, modified[0], <int>(modified[1] * <decimal>NANOS_PER_SECOND));
-}
-
-isolated function firstIndexOf(Entry[] entries, string name) returns int? {
-    foreach int index in 0 ..< entries.length() {
-        if entries[index].name == name {
-            return index;
-        }
-    }
-    return;
 }

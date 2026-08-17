@@ -48,6 +48,12 @@ public isolated class ArchiveWriter {
     public isolated function addFile(string sourcePath, string? entryName = ()) returns Error? {
         string name = entryName is string ? entryName : check baseNameOf(sourcePath);
         check validateEntryName(name);
+        // A trailing slash is a legal entry name, and what records a directory, so the implementation
+        // underneath writes one and never reads the file. That would drop the content of the file
+        // without a word, which is the same mistake `addEntry` refuses content for a directory over.
+        if name.endsWith("/") {
+            return error Error(string `entry '${name}' names a directory, which cannot hold the content of a file`);
+        }
         if isDirectory(sourcePath) {
             return error FileSystemError(string `'${sourcePath}' is a directory; use 'addDirectory' for one`);
         }
@@ -130,9 +136,24 @@ public isolated class ArchiveWriter {
             check self.writeChunk(content);
             return nativeFinishEntry(self.writer);
         }
+        // The stream is driven from here, so the caller has no way of knowing how far it was read and
+        // cannot be the one to close it. It is closed on the way out whatever happened, and the error
+        // from the writing is the one returned, since that is what the caller has to act on.
+        Error? result = self.addStreamEntry(entryName, content);
+        error? shut = content.close();
+        if result is Error {
+            return result;
+        }
+        if shut is error {
+            return error Error(string `the content given for entry '${entryName}' could not be closed`, shut);
+        }
+        return;
+    }
+
+    isolated function addStreamEntry(string entryName, stream<byte[], error?> content) returns Error? {
         // A directory name is settled before the entry is opened, so that content given under one is
-        // refused without an entry having been written for it, which is what the `byte[]` path above
-        // does. The whole stream is read for that: an empty chunk is content a directory may carry, so
+        // refused without an entry having been written for it, which is what the `byte[]` path does.
+        // The whole stream is read for that: an empty chunk is content a directory may carry, so
         // reading only as far as the first tells nothing, and a later chunk would be refused with the
         // entry already open and about to be finished.
         if entryName.endsWith("/") {

@@ -47,12 +47,8 @@ public isolated class ArchiveReader {
     # + name - Name of the entry within the archive
     # + return - Metadata of the entry, or an error if it does not exist
     public isolated function getEntry(string name) returns Entry|Error {
-        Entry[] entries = check self.entries();
-        int? index = firstIndexOf(entries, name);
-        if index is () {
-            return error EntryNotFoundError(string `the archive holds no entry named '${name}'`);
-        }
-        return entries[index];
+        int index = check self.indexOf(name);
+        return nativeEntryAt(self.archive, index);
     }
 
     # Tells whether the archive holds an entry with the given name.
@@ -60,8 +56,17 @@ public isolated class ArchiveReader {
     # + name - Name of the entry within the archive
     # + return - `true` if the archive holds such an entry, or an error
     public isolated function hasEntry(string name) returns boolean|Error {
-        Entry[] entries = check self.entries();
-        return firstIndexOf(entries, name) is int;
+        return check nativeIndexOf(self.archive, name) >= 0;
+    }
+
+    // Section 4.2 has a name answered from the index the archive already holds, so the position comes
+    // from there rather than from a record built for every entry to be scanned through.
+    isolated function indexOf(string name) returns int|Error {
+        int index = check nativeIndexOf(self.archive, name);
+        if index < 0 {
+            return error EntryNotFoundError(string `the archive holds no entry named '${name}'`);
+        }
+        return index;
     }
 
     # Reads the content of an entry, as a byte array or as a stream of chunks.
@@ -84,12 +89,8 @@ public isolated class ArchiveReader {
     public isolated function extractEntry(string name, string targetPath,
             DecompressOptions options = {}) returns Error? {
         check validateLimits(options.limits);
-        Entry[] entries = check self.entries();
-        int? index = firstIndexOf(entries, name);
-        if index is () {
-            return error EntryNotFoundError(string `the archive holds no entry named '${name}'`);
-        }
-        Entry entry = entries[index];
+        int index = check self.indexOf(name);
+        Entry entry = check nativeEntryAt(self.archive, index);
         check validateEntryName(entry.name);
         if entry.isSymlink {
             return symlinkError(entry.name);

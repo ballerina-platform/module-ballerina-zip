@@ -32,6 +32,17 @@ isolated function nativeEntries(handle archive) returns Entry[]|Error = @java:Me
     'class: "io.ballerina.lib.zip.nativeimpl.Reader"
 } external;
 
+// The position of the first entry with the given name, or a negative number when there is none. The
+// index the implementation already keeps answers this, so asking a name of the archive does not mean
+// building a record for every entry it holds.
+isolated function nativeIndexOf(handle archive, string name) returns int|Error = @java:Method {
+    'class: "io.ballerina.lib.zip.nativeimpl.Reader"
+} external;
+
+isolated function nativeEntryAt(handle archive, int index) returns Entry|Error = @java:Method {
+    'class: "io.ballerina.lib.zip.nativeimpl.Reader"
+} external;
+
 isolated function nativeOpenEntry(handle archive, string name) returns handle|Error = @java:Method {
     'class: "io.ballerina.lib.zip.nativeimpl.Reader"
 } external;

@@ -14,11 +14,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// The read position behind a `stream<byte[], Error?>` handed out by `ArchiveReader.getEntry`. It is
+// How much of an entry is asked of the native layer at a time.
+const CHUNK_SIZE = 65536;
+
+// The read position behind a `stream<byte[], Error?>` handed out by `ArchiveReader.readEntry`. It is
 // created by the native code, which is where the choice between an array and a stream is made, and it
 // keeps the position open until the entry is read to the end or the stream is closed.
-const int CHUNK_SIZE = 65536;
-
 isolated class EntryByteStream {
 
     private final handle entryStream;

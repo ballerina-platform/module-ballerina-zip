@@ -438,6 +438,48 @@ isolated function testAddEntryOfADirectoryNameFromAStreamStartingEmpty() returns
 }
 
 @test:Config {}
+isolated function testAddFileRefusesADirectoryEntryName() returns error? {
+    string work = check file:createTempDir();
+    string sourceFile = check file:joinPath(work, "summary.pdf");
+    check io:fileWriteString(sourceFile, "not really a pdf\n");
+    string archivePath = check file:joinPath(work, "out.zip");
+
+    ArchiveWriter writer = check new (archivePath);
+    // A trailing slash is a legal name, and records a directory, so this would have written an empty
+    // directory entry and dropped the file without a word.
+    Error? named = writer.addFile(sourceFile, "docs/");
+    test:assertTrue(named is Error, "a directory entry name must be refused by addFile");
+    check writer.addFile(sourceFile, "docs/summary.pdf");
+    check writer.close();
+
+    ArchiveReader reader = check new (archivePath);
+    test:assertEquals(check namesOf(reader), ["docs/summary.pdf"],
+            "the refused name must leave nothing, and the content must not be dropped");
+    check reader.close();
+    check file:remove(work, file:RECURSIVE);
+}
+
+@test:Config {}
+isolated function testAddEntryClosesTheContentStream() returns error? {
+    string work = check file:createTempDir();
+    string archivePath = check file:joinPath(work, "out.zip");
+
+    ArchiveWriter writer = check new (archivePath);
+    // `addEntry` drives the stream, so the caller cannot know how far it was read; closing it is the
+    // writer's to do, on the way out of both a success and a refusal.
+    ClosableChunkIterator written = new ([ "made up\n".toBytes() ]);
+    check writer.addEntry("note.txt", new stream<byte[], error?>(written));
+    test:assertTrue(written.isShut(), "a stream read to the end must still be closed");
+
+    ClosableChunkIterator refused = new ([ "content\n".toBytes() ]);
+    Error? failed = writer.addEntry("docs/", new stream<byte[], error?>(refused));
+    test:assertTrue(failed is Error, "content under a directory name is refused");
+    test:assertTrue(refused.isShut(), "a stream whose entry was refused must be closed as well");
+    check writer.close();
+    check file:remove(work, file:RECURSIVE);
+}
+
+@test:Config {}
 isolated function testCompressRefusesAHardLinkOfTheSource() returns error? {
     string work = check file:createTempDir();
     string sourceFile = check file:joinPath(work, "hello.txt");
@@ -590,6 +632,42 @@ isolated function buildLines() returns string {
         lines.push(string `${index},this line is here to make the content worth compressing`);
     }
     return string:'join("\n", ...lines);
+}
+
+// Records whether the stream over it was closed. A stream built on an iterator carrying a `close`
+// passes the call through to it, which is how the closing the writer owes the caller is observed.
+isolated class ClosableChunkIterator {
+    private final readonly & byte[][] chunks;
+    private int index = 0;
+    private boolean shut = false;
+
+    isolated function init(byte[][] chunks) {
+        self.chunks = chunks.cloneReadOnly();
+    }
+
+    public isolated function next() returns record {|byte[] value;|}? {
+        lock {
+            if self.index >= self.chunks.length() {
+                return ();
+            }
+            byte[] chunk = self.chunks[self.index];
+            self.index += 1;
+            return {value: chunk.clone()};
+        }
+    }
+
+    public isolated function close() returns error? {
+        lock {
+            self.shut = true;
+        }
+        return;
+    }
+
+    isolated function isShut() returns boolean {
+        lock {
+            return self.shut;
+        }
+    }
 }
 
 // Hands out chunks that were fixed when it was built, which is how a stream shape the `io` module

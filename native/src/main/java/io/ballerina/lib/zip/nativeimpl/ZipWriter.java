@@ -56,6 +56,9 @@ final class ZipWriter {
     private final ZipArchiveOutputStream out;
     private final int method;
     private boolean closed;
+    // Which strand has an entry open, and null when none has. Held here because the sequence that
+    // writes one entry cannot be held under a lock on the Ballerina side.
+    private Thread entryOwner;
 
     ZipWriter(ZipArchiveOutputStream out, String level) {
         this.out = out;
@@ -96,6 +99,14 @@ final class ZipWriter {
      * there is no source file to take one from.
      */
     synchronized void startEntry(String entryName) throws IOException {
+        // Each of these three is atomic on its own, but the sequence they form is not, and the stream
+        // underneath holds one entry open at a time. The Ballerina side cannot hold a lock across the
+        // sequence, since a lock there may not be handed the array or the stream the content comes
+        // from, so the entry is owned here instead: a second writer meets an error rather than writing
+        // its chunks into the entry the first one opened.
+        if (entryOwner != null) {
+            throw new IOException("an entry is already open on this writer");
+        }
         ZipArchiveEntry entry = new ZipArchiveEntry(entryName);
         entry.setTime(System.currentTimeMillis());
         if (entry.isDirectory()) {
@@ -105,14 +116,27 @@ final class ZipWriter {
             entry.setMethod(method);
         }
         out.putArchiveEntry(entry);
+        entryOwner = Thread.currentThread();
     }
 
     synchronized void writeChunk(byte[] chunk) throws IOException {
+        requireOpenEntry();
         out.write(chunk, 0, chunk.length);
     }
 
     synchronized void finishEntry() throws IOException {
+        requireOpenEntry();
         out.closeArchiveEntry();
+        entryOwner = null;
+    }
+
+    private void requireOpenEntry() throws IOException {
+        if (entryOwner == null) {
+            throw new IOException("no entry is open on this writer");
+        }
+        if (entryOwner != Thread.currentThread()) {
+            throw new IOException("the entry open on this writer was opened elsewhere");
+        }
     }
 
     /**

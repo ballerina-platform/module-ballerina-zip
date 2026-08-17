@@ -117,6 +117,26 @@ public final class Reader {
         return ValueCreator.createArrayValue(entries, TypeCreator.createArrayType(entryType()));
     }
 
+    public static Object nativeIndexOf(BHandle archive, BString name) {
+        ZipArchive zipArchive = (ZipArchive) archive.getValue();
+        if (zipArchive.isClosed()) {
+            return closedArchive();
+        }
+        return (long) zipArchive.firstIndexOf(name.getValue());
+    }
+
+    public static Object nativeEntryAt(BHandle archive, long index) {
+        ZipArchive zipArchive = (ZipArchive) archive.getValue();
+        if (zipArchive.isClosed()) {
+            return closedArchive();
+        }
+        int position = (int) index;
+        if (position < 0 || position >= zipArchive.size()) {
+            return ZipErrors.invalidArchive("the archive holds no entry at position " + index);
+        }
+        return toEntryRecord(zipArchive.entryAt(position), zipArchive.nameAt(position));
+    }
+
     public static Object nativeOpenEntry(BHandle archive, BString name) {
         ZipArchive zipArchive = (ZipArchive) archive.getValue();
         if (zipArchive.isClosed()) {
@@ -251,18 +271,27 @@ public final class Reader {
                                long maxCompressionRatio) {
         long written = 0;
         byte[] buffer = new byte[COPY_BUFFER_SIZE];
+        // The first chunk is read and judged before the file is opened. Section 8.2 has a write that
+        // would pass a ceiling refused before it happens, and opening the file is already a write as
+        // far as the caller is concerned: it creates what was not there, and empties what was. An entry
+        // refused on its first chunk therefore leaves the target exactly as it found it.
+        int count;
+        try {
+            count = content.read(buffer);
+        } catch (IOException e) {
+            return ZipErrors.invalidArchive("the content of entry '" + entryName + "' could not be read");
+        }
+        if (count > 0) {
+            if (byteLimit >= 0 && count > byteLimit) {
+                return SIZE_EXCEEDED;
+            }
+            if (ratioExceeded(content, count, maxCompressionRatio)) {
+                return RATIO_EXCEEDED;
+            }
+        }
         try (OutputStream out = Files.newOutputStream(target, StandardOpenOption.CREATE,
                 StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
-            while (true) {
-                int count;
-                try {
-                    count = content.read(buffer);
-                } catch (IOException e) {
-                    return ZipErrors.invalidArchive("the content of entry '" + entryName + "' could not be read");
-                }
-                if (count < 0) {
-                    return written;
-                }
+            while (count >= 0) {
                 // Both ceilings are tested before the chunk is written, so neither is passed by the
                 // size of one buffer.
                 if (byteLimit >= 0 && written + count > byteLimit) {
@@ -273,7 +302,13 @@ public final class Reader {
                 }
                 out.write(buffer, 0, count);
                 written += count;
+                try {
+                    count = content.read(buffer);
+                } catch (IOException e) {
+                    return ZipErrors.invalidArchive("the content of entry '" + entryName + "' could not be read");
+                }
             }
+            return written;
         } catch (IOException e) {
             return ZipErrors.fileSystem("entry '" + entryName + "' could not be written to '" + target + "'");
         }

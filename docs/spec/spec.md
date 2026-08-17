@@ -364,6 +364,10 @@ A `sourcePath` you name yourself is a different matter, and is used as given: if
 
 `addEntry` adds an entry whose content you supply rather than read from disk. `entryName` is required.
 
+When the content is a stream, `addEntry` reads it and closes it, on a refusal as much as on a success. It has to: it decides how much of the stream to read, so you could not know where it stopped.
+
+A name ending in `/` records a folder, which holds nothing, so `addFile` refuses one rather than writing an empty folder entry and dropping the content of the file. `addEntry` refuses content given under such a name for the same reason.
+
 The timestamp is the source file's last modified time for `addFile` and `addDirectory`, and the current time for `addEntry`. On Unix-like systems, `addFile` and `addDirectory` also record the source permissions.
 
 ### 5.3. Copying entries between archives

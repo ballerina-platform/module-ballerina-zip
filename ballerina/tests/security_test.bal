@@ -278,10 +278,13 @@ isolated function testMaxTotalSizeLimit() returns error? {
     } else {
         test:assertFail("writing more bytes than allowed must give a LimitExceededError");
     }
-    // The entries before it are written, and the one that would have passed the limit is not.
+    // The entries before it are written, and the one that would have passed the limit is not. Nothing
+    // is left where it would have gone either: opening the file is already a write, so a refusal on the
+    // first chunk must not create one, or a retry under the default `FAIL_IF_EXISTS` would meet a file
+    // that was never written.
     test:assertEquals(check readFile(check file:joinPath(target, "hello.txt")), "Hello, world!\n");
-    file:MetaData big = check file:getMetaData(check file:joinPath(target, "data", "big.csv"));
-    test:assertTrue(big.size < 100, "no write may take the total past the limit");
+    test:assertFalse(check file:test(check file:joinPath(target, "data", "big.csv"), file:EXISTS),
+            "a refused entry must leave nothing where it would have been written");
     check file:remove(target, file:RECURSIVE);
 }
 
