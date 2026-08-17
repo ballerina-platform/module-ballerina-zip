@@ -35,6 +35,10 @@ import java.util.Set;
 /**
  * One open ZIP file, its index of entries in stored order, and the entry streams handed out from it.
  * The index is read once when the archive is opened, so the archive is seen as it was at that moment.
+ *
+ * <p>Nothing here is synchronized. {@code ArchiveReader} is not an isolated class, so isolated code
+ * cannot share one reader and no two strands reach this object through it. One reader belongs to one
+ * strand, as one writer does.
  */
 final class ZipArchive {
 
@@ -59,19 +63,19 @@ final class ZipArchive {
         }
     }
 
-    synchronized boolean isClosed() {
+    boolean isClosed() {
         return closed;
     }
 
-    synchronized int size() {
+    int size() {
         return entriesInStoredOrder.size();
     }
 
-    synchronized ZipArchiveEntry entryAt(int index) {
+    ZipArchiveEntry entryAt(int index) {
         return entriesInStoredOrder.get(index);
     }
 
-    synchronized String nameAt(int index) {
+    String nameAt(int index) {
         return names.get(index);
     }
 
@@ -80,16 +84,16 @@ final class ZipArchive {
      * A ZIP file may hold more than one entry with the same name; the first one is the one reachable
      * by name.
      */
-    synchronized int firstIndexOf(String name) {
+    int firstIndexOf(String name) {
         Integer index = firstIndexByName.get(name);
         return index == null ? -1 : index;
     }
 
-    synchronized boolean canReadEntryData(ZipArchiveEntry entry) {
+    boolean canReadEntryData(ZipArchiveEntry entry) {
         return zipFile.canReadEntryData(entry);
     }
 
-    synchronized InputStream contentOf(ZipArchiveEntry entry) throws IOException {
+    InputStream contentOf(ZipArchiveEntry entry) throws IOException {
         return zipFile.getInputStream(entry);
     }
 
@@ -98,11 +102,11 @@ final class ZipArchive {
      * what lets an entry be copied into another archive whatever it holds. {@code null} where the
      * archive does not say at which offset the content of the entry begins.
      */
-    synchronized InputStream rawContentOf(ZipArchiveEntry entry) throws IOException {
+    InputStream rawContentOf(ZipArchiveEntry entry) throws IOException {
         return zipFile.getRawInputStream(entry);
     }
 
-    synchronized EntryStream openStream(ZipArchiveEntry entry) throws IOException {
+    EntryStream openStream(ZipArchiveEntry entry) throws IOException {
         EntryStream stream = new EntryStream(this, zipFile.getInputStream(entry));
         openStreams.add(stream);
         return stream;
@@ -113,17 +117,17 @@ final class ZipArchive {
      * archive like any other, so that it is closed when the archive is and answers a read afterwards
      * the same way the stream of a file would.
      */
-    synchronized EntryStream openEmptyStream() {
+    EntryStream openEmptyStream() {
         EntryStream stream = new EntryStream(this, new ByteArrayInputStream(new byte[0]));
         openStreams.add(stream);
         return stream;
     }
 
-    synchronized void streamClosed(EntryStream stream) {
+    void streamClosed(EntryStream stream) {
         openStreams.remove(stream);
     }
 
-    synchronized void close() throws IOException {
+    void close() throws IOException {
         if (closed) {
             return;
         }

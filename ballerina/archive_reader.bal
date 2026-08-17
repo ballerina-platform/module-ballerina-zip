@@ -16,14 +16,20 @@
 
 import ballerina/jballerina.java;
 
-# Represents an existing ZIP archive opened for reading.
+# Represents an existing ZIP archive opened for reading. One reader belongs to one strand.
 #
 # ```ballerina
 # zip:ArchiveReader archive = check new ("./reports.zip");
 # zip:Entry[] entries = check archive.entries();
 # check archive.close();
 # ```
-public isolated class ArchiveReader {
+// Not `isolated`, which would say an instance may be shared across strands, as `ArchiveWriter` is not.
+// The reader holds the set of entry streams handed out from it and a flag saying whether it is closed,
+// and two strands opening or closing streams at once would share both. Keeping the promise would mean
+// locking every call for the sake of a sharing this library does not offer in the other direction
+// either. One reader belongs to one strand, and several entry streams of one reader may still be open
+// at once within that strand.
+public class ArchiveReader {
 
     private final handle archive;
 

@@ -40,8 +40,7 @@ import java.util.zip.ZipException;
  * cannot share one writer and no two strands reach this object through it. Locking each call would
  * not have made a shared writer safe in any case: one entry is written by three calls to
  * {@code out}, which holds a single entry open at a time, so it is the sequence rather than the
- * single call that would have to be held. {@link ZipArchive} is synchronized, because
- * {@code ArchiveReader} is an isolated class and two strands may reach one of those.
+ * single call that would have to be held. {@link ZipArchive} is the same, for the same reason.
  */
 final class ZipWriter {
 

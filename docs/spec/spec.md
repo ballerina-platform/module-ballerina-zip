@@ -533,6 +533,10 @@ One thing is always in memory: **the index of entries**, which the format keeps 
 
 `ArchiveReader` and `ArchiveWriter` each hold one open file until closed.
 
+**One reader, or one writer, belongs to one strand.** Neither is an isolated class, so two strands cannot share one. A service that reads or builds archives for many requests opens one for each request. Every method on both is `isolated`, which says only that the method reaches no data beyond the object and its arguments; it does not make the object safe to share.
+
+Several entry streams of one reader may be open at once, as [Section 4.3](#43-reading-entry-content) says. That is one strand holding several read positions, not two strands sharing a reader.
+
 ## 10. Portability constraints
 
 This library is designed so that the ZIP implementation underneath it can be replaced without changing this document. A feature is only included if every implementation we target can do it.
