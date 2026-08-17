@@ -28,8 +28,9 @@ import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 
 /**
- * The two things the Ballerina code cannot ask the platform for itself: the path of a file with
- * every link along it followed, and the modified time of a file. Nothing here knows about ZIP files.
+ * The things the Ballerina code cannot ask the platform for itself: the path of a file with every
+ * link along it followed, whether two paths are one file, and the modified time of a file. Nothing
+ * here knows about ZIP files.
  */
 public final class FileSystem {
 
@@ -45,6 +46,20 @@ public final class FileSystem {
             return StringUtils.fromString(Paths.get(path.getValue()).toRealPath().toString());
         } catch (IOException | SecurityException e) {
             return ZipErrors.fileSystem("the path '" + path.getValue() + "' could not be resolved");
+        }
+    }
+
+    /**
+     * Returns whether two paths are the same file. A resolved path settles this for a link that
+     * carries a name of its own, but two hard links to one file are two names with nothing to
+     * resolve between them, so the file system is asked directly.
+     */
+    public static Object nativeIsSameFile(BString first, BString second) {
+        try {
+            return Files.isSameFile(Paths.get(first.getValue()), Paths.get(second.getValue()));
+        } catch (IOException | SecurityException e) {
+            return ZipErrors.fileSystem(
+                    "'" + first.getValue() + "' and '" + second.getValue() + "' could not be compared");
         }
     }
 

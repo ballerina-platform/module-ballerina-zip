@@ -99,6 +99,13 @@ public isolated class ArchiveReader {
             applyModifiedTime(targetPath, entry);
             return;
         }
+        // Section 4.5: the mode answers for a file already sitting there, and a directory is always
+        // reused rather than written over. Asked first, so that `SKIP` does not drop the entry without
+        // a word and `REPLACE` does not take an empty directory away.
+        if isDirectory(targetPath) {
+            return error FileSystemError(
+                    string `entry '${entry.name}' would be written where the directory '${targetPath}' is`);
+        }
         if pathExists(targetPath) {
             if options.fileWriteMode == FAIL_IF_EXISTS {
                 return error FileSystemError(string `entry '${entry.name}' would overwrite '${targetPath}'`);
@@ -151,6 +158,11 @@ public isolated class ArchiveReader {
                 continue;
             }
             check createDirectoriesWithin(root, check parentOf(destination), entry.name);
+            // Asked before the mode, for the reason given in `extractEntry`.
+            if isDirectory(destination) {
+                return error FileSystemError(
+                        string `entry '${entry.name}' would be written where the directory '${destination}' is`);
+            }
             if pathExists(destination) {
                 if options.fileWriteMode == FAIL_IF_EXISTS {
                     return error FileSystemError(string `entry '${entry.name}' would overwrite '${destination}'`);

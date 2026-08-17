@@ -130,15 +130,19 @@ public isolated class ArchiveWriter {
             check self.writeChunk(content);
             return nativeFinishEntry(self.writer);
         }
-        // The first chunk is taken before the entry is opened, so that content given under a
-        // directory name is refused without an entry having been written for it, which is what the
-        // `byte[]` path above does.
+        // A directory name is settled before the entry is opened, so that content given under one is
+        // refused without an entry having been written for it, which is what the `byte[]` path above
+        // does. The whole stream is read for that: an empty chunk is content a directory may carry, so
+        // reading only as far as the first tells nothing, and a later chunk would be refused with the
+        // entry already open and about to be finished.
+        if entryName.endsWith("/") {
+            check self.refuseStreamForDirectory(entryName, content);
+            check nativeStartEntry(self.writer, entryName);
+            return nativeFinishEntry(self.writer);
+        }
         record {|byte[] value;|}|error? first = content.next();
         if first is error {
             return error Error(string `the content given for entry '${entryName}' could not be read`, first);
-        }
-        if first is record {|byte[] value;|} {
-            check refuseContentForDirectory(entryName, first.value);
         }
         check nativeStartEntry(self.writer, entryName);
         // The entry is finished whatever the content turns out to be, so that a writer whose caller
@@ -151,6 +155,18 @@ public isolated class ArchiveWriter {
         return finished;
     }
 
+    isolated function refuseStreamForDirectory(string entryName, stream<byte[], error?> content) returns Error? {
+        record {|byte[] value;|}|error? chunk = content.next();
+        while chunk !is () {
+            if chunk is error {
+                return error Error(string `the content given for entry '${entryName}' could not be read`, chunk);
+            }
+            check refuseContentForDirectory(entryName, chunk.value);
+            chunk = content.next();
+        }
+        return;
+    }
+
     isolated function writeStream(string entryName, stream<byte[], error?> content,
             record {|byte[] value;|}? first) returns Error? {
         record {|byte[] value;|}|error? chunk = first;
@@ -158,7 +174,6 @@ public isolated class ArchiveWriter {
             if chunk is error {
                 return error Error(string `the content given for entry '${entryName}' could not be read`, chunk);
             }
-            check refuseContentForDirectory(entryName, chunk.value);
             check self.writeChunk(chunk.value);
             chunk = content.next();
         }

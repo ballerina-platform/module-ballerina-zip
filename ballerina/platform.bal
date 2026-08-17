@@ -28,3 +28,10 @@ isolated function nativeRealPath(string path) returns string|Error = @java:Metho
 isolated function nativeSetModifiedTime(string path, int seconds, int nanos) = @java:Method {
     'class: "io.ballerina.lib.zip.nativeimpl.FileSystem"
 } external;
+
+// Whether two paths are the same file. A resolved path answers this for links that carry a name of
+// their own, but two hard links to one file are two names with nothing to resolve between them, so
+// the file system has to be asked directly.
+isolated function nativeIsSameFile(string first, string second) returns boolean|Error = @java:Method {
+    'class: "io.ballerina.lib.zip.nativeimpl.FileSystem"
+} external;

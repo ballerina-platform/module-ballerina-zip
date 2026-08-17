@@ -179,6 +179,55 @@ isolated function testExtractAllCreatesTheTargetDirectory() returns error? {
     check file:remove(parent, file:RECURSIVE);
 }
 
+// Section 4.5: the mode answers for a file already sitting where an entry goes. A directory there is
+// not a file, and is reused in every mode rather than written over, so neither SKIP nor REPLACE may
+// decide what happens to it.
+@test:Config {}
+isolated function testExtractAllRefusesAFileEntryOverADirectory() returns error? {
+    FileWriteMode[] modes = [FAIL_IF_EXISTS, REPLACE, SKIP];
+    foreach FileWriteMode mode in modes {
+        string target = check file:createTempDir();
+        string blocking = check file:joinPath(target, "hello.txt");
+        check file:createDir(blocking);
+
+        ArchiveReader reader = check new (SIMPLE_ARCHIVE);
+        Error? extracted = reader.extractAll(target, {fileWriteMode: mode});
+        check reader.close();
+
+        test:assertTrue(extracted is FileSystemError,
+                string `a file entry over a directory must be refused under ${mode}`);
+        test:assertTrue(check file:test(blocking, file:IS_DIR),
+                string `the directory must be left as it was under ${mode}`);
+        check file:remove(target, file:RECURSIVE);
+    }
+}
+
+@test:Config {}
+isolated function testExtractEntryRefusesAFileEntryOverADirectory() returns error? {
+    string target = check file:createTempDir();
+    string blocking = check file:joinPath(target, "hello.txt");
+    check file:createDir(blocking);
+
+    ArchiveReader reader = check new (SIMPLE_ARCHIVE);
+    Error? extracted = reader.extractEntry("hello.txt", blocking, {fileWriteMode: REPLACE});
+    check reader.close();
+
+    test:assertTrue(extracted is FileSystemError, "a file entry over a directory must be refused");
+    test:assertTrue(check file:test(blocking, file:IS_DIR), "the directory must be left as it was");
+    check file:remove(target, file:RECURSIVE);
+}
+
+// A file system root resolves to a bare separator. Appending another one gave a prefix nothing could
+// start with, which let a target below the root pass the containment check in `compress` and made
+// every nested entry fail it when extracting into the root.
+@test:Config {}
+isolated function testWithinPrefixLeavesARootSeparatorAlone() {
+    test:assertEquals(withinPrefix(file:pathSeparator), file:pathSeparator,
+            "a root must not gain a second separator");
+    test:assertEquals(withinPrefix(file:pathSeparator + "tmp"), file:pathSeparator + "tmp" + file:pathSeparator,
+            "a path that is not a root gains one separator");
+}
+
 isolated function isExecutable(string path) returns boolean|error {
     os:Process process = check os:exec({value: "test", arguments: ["-x", path]});
     return check process.waitForExit() == 0;

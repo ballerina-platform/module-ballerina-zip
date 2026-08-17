@@ -14,8 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/file;
-
 # Creates a ZIP archive from a file or a directory.
 #
 # ```ballerina
@@ -54,7 +52,13 @@ isolated function verifyTargetOutsideSource(string sourcePath, string targetPath
     if resolvedTarget == resolvedSource {
         return error FileSystemError(string `the archive '${targetPath}' is the file being compressed`);
     }
-    if resolvedTarget.startsWith(resolvedSource + file:pathSeparator) {
+    // Two hard links to one file are two names that resolve to themselves, so the paths above compare
+    // unequal while naming the same bytes. Under `overwrite` creating the writer would truncate the
+    // source, so the file system is asked whenever both names are already there.
+    if pathExists(targetPath) && check isSameFile(resolvedSource, resolvedTarget) {
+        return error FileSystemError(string `the archive '${targetPath}' is the file being compressed`);
+    }
+    if resolvedTarget.startsWith(withinPrefix(resolvedSource)) {
         return error FileSystemError(string `the archive '${targetPath}' would be created inside '${sourcePath}'`);
     }
     return;

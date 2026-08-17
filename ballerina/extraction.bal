@@ -62,7 +62,7 @@ isolated function destinationPath(string root, string name) returns string|Error
 // Checks that a path, with every link along it followed, sits inside the directory the caller chose.
 isolated function verifyWithin(string root, string path, string entryName) returns Error? {
     string real = check realPath(path);
-    if real == root || real.startsWith(root + file:pathSeparator) {
+    if real == root || real.startsWith(withinPrefix(root)) {
         return;
     }
     return error UnsafePathError(string `entry '${entryName}' would be written outside the target directory`,

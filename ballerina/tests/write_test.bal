@@ -417,6 +417,45 @@ isolated function testAddEntryOfADirectoryNameFromAStream() returns error? {
 }
 
 @test:Config {}
+isolated function testAddEntryOfADirectoryNameFromAStreamStartingEmpty() returns error? {
+    string work = check file:createTempDir();
+    string archivePath = check file:joinPath(work, "out.zip");
+
+    ArchiveWriter writer = check new (archivePath);
+    // An empty chunk is content a directory may carry, so the refusal cannot rest on the first chunk
+    // alone: the one after it is what names content, and by then the entry must still be unopened.
+    stream<byte[], error?> content = new (new ChunkIterator([[], "content\n".toBytes()]));
+    Error? withContent = writer.addEntry("docs/", content);
+    test:assertTrue(withContent is Error, "a directory entry given content must be refused, not written");
+    check writer.addEntry("kept.txt", "kept\n".toBytes());
+    check writer.close();
+
+    ArchiveReader reader = check new (archivePath);
+    test:assertEquals(check namesOf(reader), ["kept.txt"],
+            "an entry refused after an empty leading chunk must not be in the archive");
+    check reader.close();
+    check file:remove(work, file:RECURSIVE);
+}
+
+@test:Config {}
+isolated function testCompressRefusesAHardLinkOfTheSource() returns error? {
+    string work = check file:createTempDir();
+    string sourceFile = check file:joinPath(work, "hello.txt");
+    check io:fileWriteString(sourceFile, "Hello, world!\n");
+    string linkPath = check file:joinPath(work, "alias.zip");
+    check makeHardLink(sourceFile, linkPath);
+
+    // The two names resolve to themselves, so comparing resolved paths says nothing; under `overwrite`
+    // creating the writer would truncate the file before it was archived.
+    Error? compressed = compress(sourceFile, linkPath, {overwrite: true});
+    test:assertTrue(compressed is FileSystemError,
+            "an archive path that is another name for the source file must be refused");
+    test:assertEquals(check readFile(sourceFile), "Hello, world!\n",
+            "the source must be left as it was");
+    check file:remove(work, file:RECURSIVE);
+}
+
+@test:Config {}
 isolated function testCompressRefusesATargetLinkedToTheSource() returns error? {
     string work = check file:createTempDir();
     string sourceFile = check file:joinPath(work, "data.txt");
@@ -551,6 +590,36 @@ isolated function buildLines() returns string {
         lines.push(string `${index},this line is here to make the content worth compressing`);
     }
     return string:'join("\n", ...lines);
+}
+
+// Hands out chunks that were fixed when it was built, which is how a stream shape the `io` module
+// does not produce - an empty chunk before a full one - is put in front of the writer.
+isolated class ChunkIterator {
+    private final readonly & byte[][] chunks;
+    private int index = 0;
+
+    isolated function init(byte[][] chunks) {
+        self.chunks = chunks.cloneReadOnly();
+    }
+
+    public isolated function next() returns record {|byte[] value;|}? {
+        lock {
+            if self.index >= self.chunks.length() {
+                return ();
+            }
+            byte[] chunk = self.chunks[self.index];
+            self.index += 1;
+            return {value: chunk.clone()};
+        }
+    }
+}
+
+isolated function makeHardLink(string target, string linkPath) returns error? {
+    os:Process process = check os:exec({value: "ln", arguments: [target, linkPath]});
+    int exit = check process.waitForExit();
+    if exit != 0 {
+        return error("the hard link could not be created");
+    }
 }
 
 isolated function makeSymlink(string target, string linkPath) returns error? {

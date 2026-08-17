@@ -277,6 +277,8 @@ public enum FileWriteMode {
 
 The mode applies to files only. Existing folders are always reused, in every mode.
 
+A file entry whose target is an existing folder is a different matter, and gives a `FileSystemError` whatever the mode says. There is no file there for the mode to answer for, and the folder is not something any mode may take away.
+
 Both functions apply the name checks in [Section 8.1](#81-unsafe-entry-names). `extractAll` also applies the limits in [Section 8.2](#82-extraction-limits).
 
 If extraction fails halfway, files already written are left in place; nothing is cleaned up. For all-or-nothing behaviour, extract into a temporary folder and move it once it succeeds.

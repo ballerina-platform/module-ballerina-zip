@@ -23,6 +23,16 @@ isolated function realPath(string path) returns string|Error {
     return nativeRealPath(path);
 }
 
+isolated function isSameFile(string first, string second) returns boolean|Error {
+    return nativeIsSameFile(first, second);
+}
+
+// The prefix a path must carry to sit under `root`. A root that is already a separator, which is what
+// a file system root resolves to, would otherwise be doubled and match nothing under it.
+isolated function withinPrefix(string root) returns string {
+    return root.endsWith(file:pathSeparator) ? root : root + file:pathSeparator;
+}
+
 isolated function pathExists(string path) returns boolean {
     boolean|file:Error exists = file:test(path, file:EXISTS);
     if exists is boolean && exists {
