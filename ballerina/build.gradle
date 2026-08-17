@@ -115,6 +115,10 @@ clean {
     delete 'build'
 }
 
+// The pom lands under `ballerina/build`, which is inside the directory the `build` task reads, so
+// Gradle fails the publish over the undeclared dependency unless the ordering is spelled out
+build.dependsOn "generatePomFileForMavenPublication"
+
 publishToMavenLocal.dependsOn build
 publish.dependsOn build
 
