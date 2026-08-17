@@ -23,9 +23,13 @@
 !native/src/main/resources/META-INF/native-image/io.ballerina.lib.zip/
 *.tar.gz
 *.rar
+# The release workflow downloads the distribution installer into the repository root, and
+# `checkCommitNeeded` fails the publish when it is left unversioned
+*.deb
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
+replay_pid*
 
 build
 .gradle/
