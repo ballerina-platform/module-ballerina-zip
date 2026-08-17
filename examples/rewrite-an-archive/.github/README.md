@@ -1,0 +1,1 @@
+../rewrite-an-archive.md
