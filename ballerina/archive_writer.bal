@@ -17,14 +17,21 @@
 import ballerina/file;
 
 # Represents a new ZIP archive being created. Entries are written in the order
-# they are added, and the archive is completed by `close`.
+# they are added, and the archive is completed by `close`. One writer belongs to
+# one strand.
 #
 # ```ballerina
 # zip:ArchiveWriter writer = check new ("./reports.zip");
 # check writer.addFile("./summary.pdf");
 # check writer.close();
 # ```
-public isolated class ArchiveWriter {
+// Not `isolated`, which would say an instance may be shared. Writing one entry takes three calls
+// into the archive underneath, which holds one entry open at a time, and the sequence cannot be held
+// under a lock: Ballerina will not have the array or the stream the content comes from crossing into
+// a lock statement. The channels of `ballerina/io` are stateful in the same way and are not isolated
+// either. `ZipWriter` still owns the open entry, so sharing one writer regardless gives an error
+// rather than an archive quietly holding one entry's bytes inside another's.
+public class ArchiveWriter {
 
     private final boolean includeSourceDirectory;
     private final handle writer;
