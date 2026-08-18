@@ -7,6 +7,7 @@ license = ["Apache-2.0"]
 authors = ["Ballerina"]
 keywords = ["Area/Storage & File Management", "Type/Library"]
 repository = "https://github.com/ballerina-platform/module-ballerina-zip"
+icon = "icon.png"
 
 [platform.java21]
 graalvmCompatible = true
