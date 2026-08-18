@@ -19,18 +19,17 @@ import ballerina/zip;
 
 ### Step 2: Archive and unpack
 
+The `limits` cap what an archive is allowed to expand to, so one built to exhaust the disk is stopped rather than unpacked.
+
 ```ballerina
 public function main() returns error? {
-    // Create an archive from a directory.
     check zip:compress("./reports", "./reports.zip");
 
-    // Look at what an archive holds, without unpacking it.
     zip:Entry[] entries = check zip:listEntries("./reports.zip");
     foreach zip:Entry entry in entries {
         io:println(entry.name, " ", entry.uncompressedSize);
     }
 
-    // Unpack it. The limits guard against an archive that expands to an unreasonable size.
     check zip:decompress("./reports.zip", "./restored", {
         limits: {maxEntries: 1000, maxTotalSize: 100 * 1024 * 1024}
     });
@@ -42,13 +41,11 @@ public function main() returns error? {
 Use `ArchiveWriter` and `ArchiveReader` when the archive is assembled from more than one source, or when only a part of it is needed.
 
 ```ballerina
-// Build an archive entry by entry.
 zip:ArchiveWriter writer = check new ("./bundle.zip", {level: zip:BEST});
 check writer.addFile("./summary.pdf");
 check writer.addEntry("notes.txt", "shipped on 2026-08-16".toBytes());
 check writer.close();
 
-// Read a single entry back, without unpacking the archive.
 zip:ArchiveReader archive = check new ("./bundle.zip");
 byte[] notes = check archive.readEntry("notes.txt");
 check archive.close();

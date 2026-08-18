@@ -19,9 +19,8 @@ import ballerina/io;
 import ballerina/zip;
 
 public function main() returns error? {
-    // What an archive from outside the system is allowed to cost. Refusing an entry that would be
-    // written outside the target directory is not configurable and always applies, but none of these
-    // limits do unless they are set: every field is optional, and an absent one means no limit.
+    // Refusing an entry that would be written outside the target directory always applies. None of
+    // these limits do unless they are set: every field is optional, and an absent one means no limit.
     zip:DecompressOptions guarded = {
         fileWriteMode: zip:REPLACE,
         limits: {
@@ -35,14 +34,11 @@ public function main() returns error? {
         string target = string `./unpacked/${name}`;
         zip:Error? outcome = zip:decompress(string `./resources/${name}.zip`, target, guarded);
 
-        // Each guard has its own error type, so a hostile archive can be told from a broken one: a
-        // `zip:InvalidArchiveError` is not a ZIP file at all, and a `zip:UnsupportedEntryError` holds
-        // an entry that is encrypted or stored with a method the library does not read.
+        // Each guard has its own error type, so a hostile archive can be told from a broken one.
         if outcome is zip:LimitExceededError {
             check discardPartialOutput(target);
             io:println(name, " refused: ", outcome.message());
         } else if outcome is zip:UnsafePathError {
-            // Names the offending entry in `entryName`, as `zip:LimitExceededError` does.
             check discardPartialOutput(target);
             io:println(name, " refused: ", outcome.message());
         } else {
@@ -52,11 +48,9 @@ public function main() returns error? {
     }
 }
 
-// The limits are measured as the archive is read, so an entry that breaches one stops the extraction
-// where it is rather than being written out in full and cleaned up afterwards. What had been written
-// of that entry stays on disk, so everything the refused extraction managed to write is thrown away
-// rather than left to be mistaken for a complete one.
 isolated function discardPartialOutput(string target) returns error? {
+    // The limits are measured as the archive is read, so a refused extraction leaves what it had
+    // already written on disk, where it could be mistaken for a complete one.
     if check file:test(target, file:EXISTS) {
         check file:remove(target, file:RECURSIVE);
     }
