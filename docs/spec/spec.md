@@ -3,7 +3,7 @@
 _Owners_: @niveathika @Nuvindu  
 _Reviewers_: @niveathika  
 _Created_: 2026/08/14  
-_Updated_: 2026/08/17  
+_Updated_: 2026/08/19  
 _Edition_: Swan Lake
 
 ## Introduction
@@ -182,7 +182,7 @@ Error messages always come from this library. Messages from the compression libr
 
 ### 4.1. Opening
 
-Create an `ArchiveReader` with the path of a zip file.
+Create an `ArchiveReader` with the path of a ZIP file.
 
 ```ballerina
 zip:ArchiveReader archive = check new ("./reports.zip");
