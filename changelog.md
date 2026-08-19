@@ -9,8 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [1.0.0] - 2026-08-19
 
-- Mark the `zip` library API as stable ([#9026](https://github.com/ballerina-platform/ballerina-library/issues/9026))
+- [Mark the `zip` library API as stable](https://github.com/ballerina-platform/ballerina-library/issues/9026)
 
 ## [0.9.0] - 2026-08-18
 
-- Add ZIP archive support: reading, writing, and safe extraction ([#9026](https://github.com/ballerina-platform/ballerina-library/issues/9026))
+- [Add ZIP archive support: reading, writing, and safe extraction](https://github.com/ballerina-platform/ballerina-library/issues/9026)
