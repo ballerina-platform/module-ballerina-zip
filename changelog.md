@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 
+## [1.0.1] - 2026-08-20
+
 - [Reword error messages to name the failed operation before its cause](https://github.com/ballerina-platform/ballerina-library/issues/9026)
 
 ## [1.0.0] - 2026-08-19
