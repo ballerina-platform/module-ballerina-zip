@@ -19,32 +19,35 @@
 // writer is refused rather than quietly corrected, so the library never writes one of these either.
 isolated function validateEntryName(string name) returns Error? {
     if name == "" {
-        return error UnsafePathError("an entry of the archive has an empty name", entryName = name);
+        return error UnsafePathError("invalid entry name: the name is empty", entryName = name);
     }
     if name.includes("\\") {
-        return error UnsafePathError(string `the name of entry '${name}' holds a '\', which is never allowed`,
+        return error UnsafePathError(string `invalid entry name '${name}': a name cannot contain '\'`,
                 entryName = name);
     }
     if name.includes("\u{0000}") {
-        return error UnsafePathError(string `the name of entry '${name}' holds a zero byte`, entryName = name);
+        return error UnsafePathError(string `invalid entry name '${name}': a name cannot contain a zero byte`,
+                entryName = name);
     }
     if name.startsWith("/") {
-        return error UnsafePathError(string `entry '${name}' has an absolute name`, entryName = name);
+        return error UnsafePathError(string `invalid entry name '${name}': a name cannot be absolute`,
+                entryName = name);
     }
     if hasDriveLetter(name) {
-        return error UnsafePathError(string `entry '${name}' has a name starting with a drive letter`,
+        return error UnsafePathError(string `invalid entry name '${name}': a name cannot start with a drive letter`,
                 entryName = name);
     }
     // A ':' names a drive at the start of a name and an alternate data stream anywhere else, so it is
     // refused wherever it appears. Opening 'notes.txt:evil' on NTFS writes a stream of 'notes.txt'
     // rather than a file of that name, which puts the content somewhere the caller cannot see it.
     if name.includes(":") {
-        return error UnsafePathError(string `the name of entry '${name}' holds a ':', which is never allowed`,
+        return error UnsafePathError(string `invalid entry name '${name}': a name cannot contain ':'`,
                 entryName = name);
     }
     foreach string segment in segmentsOf(name) {
         if segment == "." || segment == ".." {
-            return error UnsafePathError(string `the name of entry '${name}' holds a '${segment}' part`,
+            return error UnsafePathError(
+                    string `invalid entry name '${name}': a name cannot contain a '${segment}' segment`,
                     entryName = name);
         }
     }

@@ -52,7 +52,7 @@ public final class FileSystem {
         try {
             return StringUtils.fromString(file.toRealPath().toString());
         } catch (IOException | SecurityException e) {
-            return ZipErrors.fileSystem("the path '" + path.getValue() + "' could not be resolved");
+            return ZipErrors.fileSystem("cannot resolve the path '" + path.getValue() + "'");
         }
     }
 
@@ -74,7 +74,7 @@ public final class FileSystem {
             return Files.isSameFile(one, other);
         } catch (IOException | SecurityException e) {
             return ZipErrors.fileSystem(
-                    "'" + first.getValue() + "' and '" + second.getValue() + "' could not be compared");
+                    "cannot compare the paths '" + first.getValue() + "' and '" + second.getValue() + "'");
         }
     }
 
@@ -108,6 +108,6 @@ public final class FileSystem {
     }
 
     static Object unrepresentablePath(String path) {
-        return ZipErrors.fileSystem("'" + path + "' is not a path this platform can represent");
+        return ZipErrors.fileSystem("invalid path '" + path + "': the platform cannot represent it");
     }
 }
