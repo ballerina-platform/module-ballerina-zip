@@ -178,6 +178,8 @@ public type FileSystemError distinct Error;
 
 Error messages always come from this library. Messages from the compression library underneath are never passed through, so they stay the same if that library is replaced.
 
+A message names the operation that failed before the reason it failed, as `cannot <operation>: <reason>`, and states the reason as a fact rather than as what would have happened: `cannot extract entry 'notes.txt': file '/tmp/out/notes.txt' already exists`. An operation that has nothing to say beyond what went missing is stated plainly instead, as in `the archive contains no entry named 'notes.txt'`.
+
 ## 4. Reading an archive
 
 ### 4.1. Opening

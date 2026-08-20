@@ -84,13 +84,15 @@ public final class Reader {
         String archivePath = path.getValue();
         File file = new File(archivePath);
         if (!file.exists()) {
-            return ZipErrors.fileSystem("no file exists at '" + archivePath + "'");
+            return ZipErrors.fileSystem(
+                    "cannot open the archive '" + archivePath + "': no file exists at that path");
         }
         if (file.isDirectory()) {
-            return ZipErrors.fileSystem("'" + archivePath + "' is a directory, not a ZIP file");
+            return ZipErrors.fileSystem("cannot open the archive '" + archivePath + "': it is a directory");
         }
         if (!file.canRead()) {
-            return ZipErrors.fileSystem("the file at '" + archivePath + "' cannot be read");
+            return ZipErrors.fileSystem(
+                    "cannot open the archive '" + archivePath + "': the file cannot be read");
         }
         try {
             // The general purpose bit flag of each entry is the only thing that decides how its name
@@ -101,7 +103,8 @@ public final class Reader {
             return ValueCreator.createHandleValue(new ZipArchive(zipFile));
         } catch (IOException e) {
             // The file is there and can be read, so what is wrong is what is in it.
-            return ZipErrors.invalidArchive("the file at '" + archivePath + "' is not a valid ZIP archive");
+            return ZipErrors.invalidArchive(
+                    "cannot open the archive '" + archivePath + "': it is not a valid ZIP archive");
         }
     }
 
@@ -133,7 +136,7 @@ public final class Reader {
         // The bounds are checked before the cast, as in `nativeExtractEntry`: a Ballerina `int` is 64
         // bits, and narrowing first would let a value whose low 32 bits land inside the archive pass.
         if (index < 0 || index >= zipArchive.size()) {
-            return ZipErrors.invalidArchive("the archive holds no entry at position " + index);
+            return ZipErrors.invalidArchive("the archive contains no entry at index " + index);
         }
         int position = (int) index;
         return toEntryRecord(zipArchive.entryAt(position), zipArchive.nameAt(position));
@@ -147,7 +150,7 @@ public final class Reader {
         String entryName = name.getValue();
         int index = zipArchive.firstIndexOf(entryName);
         if (index < 0) {
-            return ZipErrors.entryNotFound("the archive holds no entry named '" + entryName + "'");
+            return ZipErrors.entryNotFound("the archive contains no entry named '" + entryName + "'");
         }
         ZipArchiveEntry entry = zipArchive.entryAt(index);
         if (entry.isDirectory()) {
@@ -167,13 +170,13 @@ public final class Reader {
     public static Object nativeReadChunk(BHandle entryStream, long size) {
         EntryStream stream = (EntryStream) entryStream.getValue();
         if (stream.isClosed()) {
-            return ZipErrors.invalidArchive("the entry stream is closed");
+            return ZipErrors.invalidArchive("cannot read the entry: the stream is closed");
         }
         try {
             byte[] chunk = stream.read((int) size);
             return chunk == null ? null : ValueCreator.createArrayValue(chunk);
         } catch (IOException e) {
-            return ZipErrors.invalidArchive("the content of the entry could not be read");
+            return ZipErrors.invalidArchive("cannot read the content of the entry");
         }
     }
 
@@ -183,7 +186,7 @@ public final class Reader {
             stream.close();
             return null;
         } catch (IOException e) {
-            return ZipErrors.invalidArchive("the entry stream could not be closed");
+            return ZipErrors.invalidArchive("cannot close the entry stream");
         }
     }
 
@@ -202,7 +205,7 @@ public final class Reader {
             return closedArchive();
         }
         if (entryIndex < 0 || entryIndex >= zipArchive.size()) {
-            return ZipErrors.invalidArchive("the archive holds no entry at position " + entryIndex);
+            return ZipErrors.invalidArchive("the archive contains no entry at index " + entryIndex);
         }
         int index = (int) entryIndex;
         ZipArchiveEntry entry = zipArchive.entryAt(index);
@@ -228,7 +231,7 @@ public final class Reader {
             zipArchive.close();
             return null;
         } catch (IOException e) {
-            return ZipErrors.fileSystem("the archive could not be closed");
+            return ZipErrors.fileSystem("cannot close the archive");
         }
     }
 
@@ -315,7 +318,8 @@ public final class Reader {
             }
             return written;
         } catch (IOException e) {
-            return ZipErrors.fileSystem("entry '" + entryName + "' could not be written to '" + target + "'");
+            return ZipErrors.fileSystem("cannot extract entry '" + entryName
+                    + "': the content could not be written to '" + target + "'");
         }
     }
 
@@ -338,7 +342,8 @@ public final class Reader {
 
     private static Object readableOrError(ZipArchive archive, ZipArchiveEntry entry, String entryName) {
         if (entry.getGeneralPurposeBit().usesEncryption()) {
-            return ZipErrors.unsupportedEntry("entry '" + entryName + "' is encrypted", entryName);
+            return ZipErrors.unsupportedEntry(
+                    "cannot read entry '" + entryName + "': encrypted entries are not supported", entryName);
         }
         // Only the two methods of the module are read, whatever else the implementation underneath is
         // able to decompress.
@@ -421,6 +426,6 @@ public final class Reader {
     }
 
     private static Object closedArchive() {
-        return ZipErrors.invalidArchive("the archive is closed");
+        return ZipErrors.invalidArchive("cannot read the archive: it is closed");
     }
 }

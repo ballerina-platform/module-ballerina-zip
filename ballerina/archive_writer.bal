@@ -59,10 +59,12 @@ public class ArchiveWriter {
         // underneath writes one and never reads the file. That would drop the content of the file
         // without a word, which is the same mistake `addEntry` refuses content for a directory over.
         if name.endsWith("/") {
-            return error Error(string `entry '${name}' names a directory, which cannot hold the content of a file`);
+            return error Error(string `cannot add entry '${name}': a name ending in '/' denotes a directory ` +
+                    "and cannot hold file content");
         }
         if isDirectory(sourcePath) {
-            return error FileSystemError(string `'${sourcePath}' is a directory; use 'addDirectory' for one`);
+            return error FileSystemError(
+                    string `cannot add file '${sourcePath}': it is a directory; use 'addDirectory' instead`);
         }
         return nativeAddFile(self.writer, name, sourcePath);
     }
@@ -77,7 +79,8 @@ public class ArchiveWriter {
             check validateEntryName(entryName);
         }
         if !isDirectory(sourcePath) {
-            return error FileSystemError(string `no directory exists at '${sourcePath}'`);
+            return error FileSystemError(
+                    string `cannot add directory '${sourcePath}': no directory exists at that path`);
         }
         // Section 5.2: a name given here settles the top level whichever way `includeSourceDirectory`
         // is set, which only shapes a call that names nothing. Reading the option first instead would
@@ -107,7 +110,8 @@ public class ArchiveWriter {
         }
         file:MetaData[]|file:Error children = file:readDir(sourcePath);
         if children is file:Error {
-            return error FileSystemError(string `the directory '${sourcePath}' could not be read`);
+            return error FileSystemError(
+                    string `cannot add directory '${sourcePath}': the directory could not be read`);
         }
         // Walked in name order, so that the same tree always gives the same archive.
         file:MetaData[] ordered = from file:MetaData child in children
@@ -158,7 +162,8 @@ public class ArchiveWriter {
             return result;
         }
         if shut is error {
-            return error Error(string `the content given for entry '${entryName}' could not be closed`, shut);
+            return error Error(string `cannot add entry '${entryName}': the content stream could not be closed`,
+                    shut);
         }
         return;
     }
@@ -176,7 +181,8 @@ public class ArchiveWriter {
         }
         record {|byte[] value;|}|error? first = content.next();
         if first is error {
-            return error Error(string `the content given for entry '${entryName}' could not be read`, first);
+            return error Error(string `cannot add entry '${entryName}': the content stream could not be read`,
+                    first);
         }
         check nativeStartEntry(self.writer, entryName);
         // The entry is finished whatever the content turns out to be, so that a writer whose caller
@@ -193,7 +199,8 @@ public class ArchiveWriter {
         record {|byte[] value;|}|error? chunk = content.next();
         while chunk !is () {
             if chunk is error {
-                return error Error(string `the content given for entry '${entryName}' could not be read`, chunk);
+                return error Error(
+                        string `cannot add entry '${entryName}': the content stream could not be read`, chunk);
             }
             check refuseContentForDirectory(entryName, chunk.value);
             chunk = content.next();
@@ -206,7 +213,8 @@ public class ArchiveWriter {
         record {|byte[] value;|}|error? chunk = first;
         while chunk !is () {
             if chunk is error {
-                return error Error(string `the content given for entry '${entryName}' could not be read`, chunk);
+                return error Error(
+                        string `cannot add entry '${entryName}': the content stream could not be read`, chunk);
             }
             check self.writeChunk(chunk.value);
             chunk = content.next();
@@ -246,7 +254,8 @@ public class ArchiveWriter {
 // bytes all the same. An empty array is how an empty directory is recorded.
 isolated function refuseContentForDirectory(string entryName, byte[] content) returns Error? {
     if content.length() > 0 && entryName.endsWith("/") {
-        return error Error(string `entry '${entryName}' names a directory, which holds no content`);
+        return error Error(string `cannot add entry '${entryName}': a name ending in '/' denotes a directory, ` +
+                "which holds no content");
     }
     return;
 }

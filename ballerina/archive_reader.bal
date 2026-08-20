@@ -63,7 +63,7 @@ public class ArchiveReader {
     isolated function indexOf(string name) returns int|Error {
         int index = check nativeIndexOf(self.archive, name);
         if index < 0 {
-            return error EntryNotFoundError(string `the archive holds no entry named '${name}'`);
+            return error EntryNotFoundError(string `the archive contains no entry named '${name}'`);
         }
         return index;
     }
@@ -104,11 +104,12 @@ public class ArchiveReader {
         // a word and `REPLACE` does not take an empty directory away.
         if isDirectory(targetPath) {
             return error FileSystemError(
-                    string `entry '${entry.name}' would be written where the directory '${targetPath}' is`);
+                    string `cannot extract entry '${entry.name}': a directory already exists at '${targetPath}'`);
         }
         if pathExists(targetPath) {
             if options.fileWriteMode == FAIL_IF_EXISTS {
-                return error FileSystemError(string `entry '${entry.name}' would overwrite '${targetPath}'`);
+                return error FileSystemError(
+                        string `cannot extract entry '${entry.name}': file '${targetPath}' already exists`);
             }
             if options.fileWriteMode == SKIP {
                 return;
@@ -142,7 +143,8 @@ public class ArchiveReader {
             Entry entry = entries[index];
             int? maxEntries = options.limits.maxEntries;
             if maxEntries is int && index + 1 > maxEntries {
-                return error LimitExceededError(string `the archive holds more than the ${maxEntries} entries allowed`,
+                return error LimitExceededError(
+                        string `cannot extract the archive: it contains more than the ${maxEntries} entries allowed`,
                         entryName = entry.name);
             }
             check validateEntryName(entry.name);
@@ -161,11 +163,12 @@ public class ArchiveReader {
             // Asked before the mode, for the reason given in `extractEntry`.
             if isDirectory(destination) {
                 return error FileSystemError(
-                        string `entry '${entry.name}' would be written where the directory '${destination}' is`);
+                        string `cannot extract entry '${entry.name}': a directory already exists at '${destination}'`);
             }
             if pathExists(destination) {
                 if options.fileWriteMode == FAIL_IF_EXISTS {
-                    return error FileSystemError(string `entry '${entry.name}' would overwrite '${destination}'`);
+                    return error FileSystemError(
+                            string `cannot extract entry '${entry.name}': file '${destination}' already exists`);
                 }
                 if options.fileWriteMode == SKIP {
                     continue;

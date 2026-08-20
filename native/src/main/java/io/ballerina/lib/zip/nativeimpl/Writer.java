@@ -49,7 +49,8 @@ public final class Writer {
             return FileSystem.unrepresentablePath(target);
         }
         if (Files.isDirectory(file)) {
-            return ZipErrors.fileSystem("'" + target + "' is a directory, not a path a ZIP file can be written to");
+            return ZipErrors.fileSystem(
+                    "cannot create the archive '" + target + "': a directory already exists at that path");
         }
         // Section 5.1: whether the path is free is left to `CREATE_NEW`, which fails if anything is
         // there, rather than asked beforehand, so that nothing can appear between the two. Under
@@ -65,10 +66,11 @@ public final class Writer {
             ZipArchiveOutputStream out = new ZipArchiveOutputStream(file, options);
             return ValueCreator.createHandleValue(new ZipWriter(out, level.getValue()));
         } catch (FileAlreadyExistsException e) {
-            return ZipErrors.fileSystem("a file is already at '" + target
-                    + "'; set 'overwrite' to replace it");
+            return ZipErrors.fileSystem("cannot create the archive '" + target
+                    + "': a file already exists there; set 'overwrite' to replace it");
         } catch (IOException | UnsupportedOperationException e) {
-            return ZipErrors.fileSystem("the file at '" + target + "' could not be created");
+            return ZipErrors.fileSystem(
+                    "cannot create the archive '" + target + "': the file could not be created");
         }
     }
 
@@ -83,13 +85,13 @@ public final class Writer {
             return FileSystem.unrepresentablePath(source);
         }
         if (!Files.exists(file)) {
-            return ZipErrors.fileSystem("no file exists at '" + source + "'");
+            return ZipErrors.fileSystem("cannot add file '" + source + "': no file exists at that path");
         }
         try {
             zipWriter.addFile(file, entryName.getValue());
             return null;
         } catch (IOException e) {
-            return ZipErrors.fileSystem("the file at '" + source + "' could not be added to the archive");
+            return ZipErrors.fileSystem("cannot add file '" + source + "' to the archive");
         }
     }
 
@@ -102,7 +104,7 @@ public final class Writer {
             zipWriter.startEntry(entryName.getValue());
             return null;
         } catch (IOException e) {
-            return ZipErrors.fileSystem("entry '" + entryName.getValue() + "' could not be added to the archive");
+            return ZipErrors.fileSystem("cannot add entry '" + entryName.getValue() + "' to the archive");
         }
     }
 
@@ -115,7 +117,7 @@ public final class Writer {
             zipWriter.writeChunk(content.getBytes());
             return null;
         } catch (IOException e) {
-            return ZipErrors.fileSystem("the content of the entry could not be written to the archive");
+            return ZipErrors.fileSystem("cannot write the content of the entry to the archive");
         }
     }
 
@@ -128,7 +130,7 @@ public final class Writer {
             zipWriter.finishEntry();
             return null;
         } catch (IOException e) {
-            return ZipErrors.fileSystem("the entry could not be completed");
+            return ZipErrors.fileSystem("cannot complete the entry");
         }
     }
 
@@ -138,30 +140,30 @@ public final class Writer {
             return closedArchive();
         }
         ZipArchive source = (ZipArchive) sourceArchive.getValue();
-        if (source.isClosed()) {
-            return ZipErrors.invalidArchive("the archive the entry is copied from is closed");
-        }
         String name = entryName.getValue();
+        if (source.isClosed()) {
+            return ZipErrors.invalidArchive("cannot copy entry '" + name + "': the source archive is closed");
+        }
         int index = source.firstIndexOf(name);
         if (index < 0) {
-            return ZipErrors.entryNotFound("the archive holds no entry named '" + name + "'");
+            return ZipErrors.entryNotFound("the source archive contains no entry named '" + name + "'");
         }
         ZipArchiveEntry entry = source.entryAt(index);
         if (entry.getGeneralPurposeBit().usesEncryption()) {
             // The bytes could be carried across untouched, but the flag saying they are encrypted
             // cannot: what would be written is a header saying the content is plain over content
             // that is not. A password-protected entry is unsupported, as section 11 says.
-            return ZipErrors.unsupportedEntry("entry '" + name + "' is encrypted, and an encrypted entry cannot "
+            return ZipErrors.unsupportedEntry("cannot copy entry '" + name + "': encrypted entries cannot "
                     + "be written into another archive", name);
         }
         try {
             zipWriter.copyEntry(source, index);
             return null;
         } catch (UnsupportedZipFeatureException e) {
-            return ZipErrors.unsupportedEntry("entry '" + name + "' is stored in a way that cannot be written "
-                    + "into another archive", name);
+            return ZipErrors.unsupportedEntry("cannot copy entry '" + name + "': it is stored in a way that "
+                    + "cannot be written into another archive", name);
         } catch (IOException e) {
-            return ZipErrors.invalidArchive("entry '" + name + "' could not be copied from the archive");
+            return ZipErrors.invalidArchive("cannot copy entry '" + name + "' from the source archive");
         }
     }
 
@@ -173,11 +175,11 @@ public final class Writer {
         } catch (IOException e) {
             // The central directory is written by `close`, so a failure here is what stands between
             // the file and being a valid archive.
-            return ZipErrors.fileSystem("the archive could not be completed");
+            return ZipErrors.fileSystem("cannot complete the archive");
         }
     }
 
     private static Object closedArchive() {
-        return ZipErrors.invalidArchive("the archive is closed");
+        return ZipErrors.invalidArchive("cannot write to the archive: it is closed");
     }
 }
