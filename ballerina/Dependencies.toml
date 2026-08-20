@@ -136,7 +136,7 @@ modules = [
 [[package]]
 org = "ballerina"
 name = "zip"
-version = "0.9.1"
+version = "1.0.0"
 dependencies = [
 	{org = "ballerina", name = "file"},
 	{org = "ballerina", name = "io"},
