@@ -58,7 +58,7 @@ allprojects {
 
 }
 
-task build {
+tasks.named('build') {
     dependsOn(":zip-native:build")
     dependsOn(":zip-ballerina:build")
 }
