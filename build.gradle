@@ -58,9 +58,18 @@ allprojects {
 
 }
 
-tasks.named('build') {
-    dependsOn(":zip-native:build")
-    dependsOn(":zip-ballerina:build")
+if (tasks.names.contains('build')) {
+    tasks.named('build') {
+        dependsOn(":zip-native:build")
+        dependsOn(":zip-ballerina:build")
+
+    }
+} else {
+    tasks.register('build') {
+        dependsOn(":zip-native:build")
+        dependsOn(":zip-ballerina:build")
+
+    }
 }
 
 def moduleVersion = project.version.replace("-SNAPSHOT", "")
