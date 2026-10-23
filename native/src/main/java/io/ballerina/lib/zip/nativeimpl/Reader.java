@@ -303,9 +303,13 @@ public final class Reader {
                 // Both ceilings are tested before the chunk is written, so neither is passed by the
                 // size of one buffer.
                 if (byteLimit >= 0 && written + count > byteLimit) {
+                    out.close();
+                    Files.deleteIfExists(target);
                     return SIZE_EXCEEDED;
                 }
                 if (ratioExceeded(content, written + count, maxCompressionRatio)) {
+                    out.close();
+                    Files.deleteIfExists(target);
                     return RATIO_EXCEEDED;
                 }
                 out.write(buffer, 0, count);
