@@ -307,6 +307,22 @@ isolated function testMaxTotalSizeLimit() returns error? {
 }
 
 @test:Config {}
+isolated function testPartialFileIsRemovedWhenSizeLimitIsExceeded() returns error? {
+    string target = check file:createTempDir();
+    ArchiveReader reader = check new (SIMPLE_ARCHIVE);
+    Error? result = reader.extractAll(target, {limits: {maxTotalSize: 50000}});
+    check reader.close();
+    if result is LimitExceededError {
+        test:assertEquals(result.detail().entryName, "data/big.csv");
+    } else {
+        test:assertFail("writing more bytes than allowed must give a LimitExceededError");
+    }
+    test:assertFalse(check file:test(check file:joinPath(target, "data", "big.csv"), file:EXISTS),
+            "a partially written file must be removed when the size limit is exceeded");
+    check file:remove(target, file:RECURSIVE);
+}
+
+@test:Config {}
 isolated function testLimitsMustBePositive() returns error? {
     string target = check file:createTempDir();
     ArchiveReader reader = check new (SIMPLE_ARCHIVE);
