@@ -52,7 +52,8 @@ public final class FileSystem {
         try {
             return StringUtils.fromString(file.toRealPath().toString());
         } catch (IOException | SecurityException e) {
-            return ZipErrors.fileSystem("cannot resolve the path '" + path.getValue() + "'");
+            return ZipErrors.fileSystem("cannot resolve the path '" + path.getValue()
+                    + "': it does not exist or cannot be accessed");
         }
     }
 
@@ -74,7 +75,8 @@ public final class FileSystem {
             return Files.isSameFile(one, other);
         } catch (IOException | SecurityException e) {
             return ZipErrors.fileSystem(
-                    "cannot compare the paths '" + first.getValue() + "' and '" + second.getValue() + "'");
+                    "cannot compare the paths '" + first.getValue() + "' and '" + second.getValue()
+                    + "': one of them does not exist or cannot be accessed");
         }
     }
 

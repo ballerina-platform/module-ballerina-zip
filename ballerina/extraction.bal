@@ -79,7 +79,7 @@ isolated function createDirectories(string path, string entryName) returns Error
     file:Error? created = file:createDir(path, file:RECURSIVE);
     if created is file:Error {
         if entryName == "" {
-            return error FileSystemError(string `cannot create the target directory '${path}'`);
+            return error FileSystemError(string `cannot create the target directory '${path}': the file system refused to create it`);
         }
         return error FileSystemError(
                 string `cannot extract entry '${entryName}': directory '${path}' could not be created`);
