@@ -21,6 +21,7 @@ package io.ballerina.lib.zip.nativeimpl;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -133,14 +134,24 @@ final class ZipWriter {
      */
     void copyEntry(ZipArchive source, int index) throws IOException {
         ZipArchiveEntry entry = source.entryAt(index);
-        InputStream raw = source.rawContentOf(entry);
-        if (raw == null) {
-            throw new IOException("the entry has no readable content");
-        }
-        try (InputStream content = raw) {
+        InputStream raw;
+        ZipArchiveEntry renamed;
+        try {
+            raw = source.rawContentOf(entry);
             // The name is the one this library decoded, not the one the implementation underneath
             // decoded, so that a copied entry keeps the name it was reached by.
-            out.addRawArchiveEntry(new RenamedEntry(entry, source.nameAt(index)), content);
+            renamed = new RenamedEntry(entry, source.nameAt(index));
+        } catch (IOException e) {
+            throw new SourceReadException(e);
+        }
+        if (raw == null) {
+            throw new SourceReadException(new IOException("the entry has no readable content"));
+        }
+        // Reading the source and writing this archive are interleaved inside one call, so the source
+        // side is told apart by the exception it throws: a failed read is the source archive being
+        // damaged, and any other failure is this archive not being written.
+        try (InputStream content = new SourceStream(raw)) {
+            out.addRawArchiveEntry(renamed, content);
         }
     }
 
@@ -188,6 +199,60 @@ final class ZipWriter {
         private RenamedEntry(ZipArchiveEntry source, String name) throws ZipException {
             super(source);
             setName(name);
+        }
+    }
+
+    /**
+     * A failure to read the archive an entry is being copied from, as opposed to a failure to write
+     * the archive it is being copied into.
+     */
+    static final class SourceReadException extends IOException {
+
+        private SourceReadException(IOException cause) {
+            super(cause.getMessage(), cause);
+        }
+    }
+
+    private static final class SourceStream extends FilterInputStream {
+
+        private SourceStream(InputStream in) {
+            super(in);
+        }
+
+        @Override
+        public int read() throws IOException {
+            try {
+                return super.read();
+            } catch (IOException e) {
+                throw new SourceReadException(e);
+            }
+        }
+
+        @Override
+        public int read(byte[] buffer, int offset, int length) throws IOException {
+            try {
+                return super.read(buffer, offset, length);
+            } catch (IOException e) {
+                throw new SourceReadException(e);
+            }
+        }
+
+        @Override
+        public long skip(long count) throws IOException {
+            try {
+                return super.skip(count);
+            } catch (IOException e) {
+                throw new SourceReadException(e);
+            }
+        }
+
+        @Override
+        public void close() throws IOException {
+            try {
+                super.close();
+            } catch (IOException e) {
+                throw new SourceReadException(e);
+            }
         }
     }
 }

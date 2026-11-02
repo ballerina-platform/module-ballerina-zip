@@ -162,8 +162,10 @@ public final class Writer {
         } catch (UnsupportedZipFeatureException e) {
             return ZipErrors.unsupportedEntry("cannot copy entry '" + name + "': it is stored in a way that "
                     + "cannot be written into another archive", name);
+        } catch (ZipWriter.SourceReadException e) {
+            return ZipErrors.invalidArchive("cannot copy entry '" + name + "': the source archive could not be read");
         } catch (IOException e) {
-            return ZipErrors.invalidArchive("cannot copy entry '" + name + "' from the source archive");
+            return ZipErrors.fileSystem("cannot copy entry '" + name + "': the archive could not be written");
         }
     }
 
