@@ -57,7 +57,7 @@ isolated function isSymlink(string path) returns boolean {
 isolated function parentOf(string path) returns string|Error {
     string|file:Error parent = file:parentPath(path);
     if parent is file:Error {
-        return error FileSystemError(string `cannot resolve the parent directory of '${path}'`);
+        return error FileSystemError(string `cannot resolve the parent directory of '${path}': the path is not valid`);
     }
     return parent;
 }
@@ -65,7 +65,7 @@ isolated function parentOf(string path) returns string|Error {
 isolated function baseNameOf(string path) returns string|Error {
     string|file:Error name = file:basename(path);
     if name is file:Error {
-        return error FileSystemError(string `cannot resolve the file name of '${path}'`);
+        return error FileSystemError(string `cannot resolve the file name of '${path}': the path is not valid`);
     }
     return name;
 }

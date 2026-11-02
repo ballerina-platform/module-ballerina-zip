@@ -91,7 +91,8 @@ public final class Writer {
             zipWriter.addFile(file, entryName.getValue());
             return null;
         } catch (IOException e) {
-            return ZipErrors.fileSystem("cannot add file '" + source + "' to the archive");
+            return ZipErrors.fileSystem("cannot add file '" + source
+                    + "': the file could not be read or the archive could not be written");
         }
     }
 
@@ -104,7 +105,8 @@ public final class Writer {
             zipWriter.startEntry(entryName.getValue());
             return null;
         } catch (IOException e) {
-            return ZipErrors.fileSystem("cannot add entry '" + entryName.getValue() + "' to the archive");
+            return ZipErrors.fileSystem("cannot add entry '" + entryName.getValue()
+                    + "': the archive could not be written");
         }
     }
 
@@ -117,7 +119,7 @@ public final class Writer {
             zipWriter.writeChunk(content.getBytes());
             return null;
         } catch (IOException e) {
-            return ZipErrors.fileSystem("cannot write the content of the entry to the archive");
+            return ZipErrors.fileSystem("cannot write the content of the entry: the archive could not be written");
         }
     }
 
@@ -130,7 +132,7 @@ public final class Writer {
             zipWriter.finishEntry();
             return null;
         } catch (IOException e) {
-            return ZipErrors.fileSystem("cannot complete the entry");
+            return ZipErrors.fileSystem("cannot complete the entry: the archive could not be written");
         }
     }
 
@@ -175,7 +177,7 @@ public final class Writer {
         } catch (IOException e) {
             // The central directory is written by `close`, so a failure here is what stands between
             // the file and being a valid archive.
-            return ZipErrors.fileSystem("cannot complete the archive");
+            return ZipErrors.fileSystem("cannot complete the archive: the file could not be written");
         }
     }
 

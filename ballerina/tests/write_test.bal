@@ -727,3 +727,26 @@ isolated function setMode(string path, string mode) returns error? {
         return error("the permissions of the file could not be set");
     }
 }
+
+@test:Config {}
+isolated function testWriteFailuresGiveAReason() returns error? {
+    // Every write to `/dev/full` fails as a full disk would.
+    if !check file:test("/dev/full", file:EXISTS) {
+        return;
+    }
+    byte[] content = [];
+    foreach int i in 0 ..< 200000 {
+        content.push(<byte>(i % 251));
+    }
+    ArchiveWriter writer = check new ("/dev/full", {overwrite: true, level: NONE});
+    Error? added = writer.addEntry("big.bin", content);
+    Error? closed = writer.close();
+    Error[] failures = from Error? e in [added, closed] where e is Error select e;
+    test:assertTrue(failures.length() > 0, "writing to a full disk must fail");
+    foreach Error failure in failures {
+        test:assertTrue(failure is FileSystemError, failure.message());
+        test:assertTrue(failure.message().includes(": the archive could not be written")
+                || failure.message().includes(": the file could not be written"),
+                string `the message must give a reason: ${failure.message()}`);
+    }
+}

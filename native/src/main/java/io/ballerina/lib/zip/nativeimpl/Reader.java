@@ -176,7 +176,7 @@ public final class Reader {
             byte[] chunk = stream.read((int) size);
             return chunk == null ? null : ValueCreator.createArrayValue(chunk);
         } catch (IOException e) {
-            return ZipErrors.invalidArchive("cannot read the content of the entry");
+            return ZipErrors.invalidArchive("cannot read the content of the entry: the stored content is damaged");
         }
     }
 
@@ -186,7 +186,7 @@ public final class Reader {
             stream.close();
             return null;
         } catch (IOException e) {
-            return ZipErrors.invalidArchive("cannot close the entry stream");
+            return ZipErrors.invalidArchive("cannot close the entry stream: the read position could not be released");
         }
     }
 
@@ -231,7 +231,7 @@ public final class Reader {
             zipArchive.close();
             return null;
         } catch (IOException e) {
-            return ZipErrors.fileSystem("cannot close the archive");
+            return ZipErrors.fileSystem("cannot close the archive: the file could not be released");
         }
     }
 
