@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 
+### Fixed
+
+- [Remove the partly extracted file when an extraction limit is exceeded](https://github.com/ballerina-platform/ballerina-library/issues/9355)
+
 ## [1.0.1] - 2026-08-20
 
 - [Reword error messages to name the failed operation before its cause](https://github.com/ballerina-platform/ballerina-library/issues/9026)
