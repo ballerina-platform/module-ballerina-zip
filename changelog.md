@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 
+- [Clarify entry timestamps, Unix mode, plain `Error` cases, and directory extraction in the specification](https://github.com/ballerina-platform/ballerina-library/issues/9358)
+
 ### Fixed
 
 - [Remove the partly extracted file when an extraction limit is exceeded](https://github.com/ballerina-platform/ballerina-library/issues/9355)
