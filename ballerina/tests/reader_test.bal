@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/file;
 import ballerina/test;
 import ballerina/time;
 
@@ -190,4 +191,15 @@ isolated function testOpenDirectory() {
 isolated function testOpenFileThatIsNotAnArchive() {
     ArchiveReader|Error reader = new (NOT_AN_ARCHIVE);
     test:assertTrue(reader is InvalidArchiveError, "a file that is not a ZIP must give an InvalidArchiveError");
+}
+
+@test:Config {}
+isolated function testClosedReaderIsReportedBeforeLimitChecks() returns error? {
+    string work = check file:createTempDir();
+    ArchiveReader reader = check new (SIMPLE_ARCHIVE);
+    check reader.close();
+    test:assertTrue(reader.extractAll(work, {limits: {maxEntries: 0}}) is InvalidArchiveError);
+    test:assertTrue(reader.extractEntry("hello.txt", check file:joinPath(work, "hello.txt"),
+            {limits: {maxEntries: 0}}) is InvalidArchiveError);
+    check file:remove(work, file:RECURSIVE);
 }

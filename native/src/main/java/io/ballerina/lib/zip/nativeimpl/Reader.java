@@ -108,6 +108,10 @@ public final class Reader {
         }
     }
 
+    public static Object nativeEnsureArchiveOpen(BHandle archive) {
+        return ((ZipArchive) archive.getValue()).isClosed() ? closedArchive() : null;
+    }
+
     public static Object nativeEntries(BHandle archive) {
         ZipArchive zipArchive = (ZipArchive) archive.getValue();
         if (zipArchive.isClosed()) {

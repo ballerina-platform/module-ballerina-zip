@@ -202,3 +202,17 @@ isolated function testRewriteAnArchiveWithoutOneEntry() returns error? {
     check reader.close();
     check file:remove(work, file:RECURSIVE);
 }
+
+@test:Config {}
+isolated function testCopyEntryReportsAFailedWriteAsFileSystemError() returns error? {
+    // Every write to `/dev/full` fails as a full disk would.
+    if !check file:test("/dev/full", file:EXISTS) {
+        return;
+    }
+    ArchiveReader sourceArchive = check new (SIMPLE_ARCHIVE);
+    ArchiveWriter writer = check new ("/dev/full", {overwrite: true});
+    Error? result = writer.copyEntry(sourceArchive, "hello.txt");
+    check sourceArchive.close();
+    test:assertTrue(result is FileSystemError,
+            string `a failed write to the target must be a FileSystemError, got: ${result is Error ? result.message() : "()"}`);
+}

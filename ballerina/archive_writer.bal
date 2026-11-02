@@ -53,6 +53,7 @@ public class ArchiveWriter {
     # + entryName - Name to store the entry under, defaulting to the file name
     # + return - `()` on success, or an error
     public isolated function addFile(string sourcePath, string? entryName = ()) returns Error? {
+        check nativeEnsureWriterOpen(self.writer);
         string name = entryName is string ? entryName : check baseNameOf(sourcePath);
         check validateEntryName(name);
         // A trailing slash is a legal entry name, and what records a directory, so the implementation
@@ -75,6 +76,7 @@ public class ArchiveWriter {
     # + entryName - Name for the top level of the added tree, overriding `includeSourceDirectory`
     # + return - `()` on success, or an error
     public isolated function addDirectory(string sourcePath, string? entryName = ()) returns Error? {
+        check nativeEnsureWriterOpen(self.writer);
         if entryName is string {
             check validateEntryName(entryName);
         }
@@ -140,6 +142,7 @@ public class ArchiveWriter {
     # + return - `()` on success, or an error
     public isolated function addEntry(string entryName,
             byte[]|stream<byte[], error?> content) returns Error? {
+        check nativeEnsureWriterOpen(self.writer);
         check validateEntryName(entryName);
         if content is byte[] {
             check refuseContentForDirectory(entryName, content);
@@ -235,6 +238,7 @@ public class ArchiveWriter {
     # + entryName - Name of the entry within the source archive
     # + return - `()` on success, or an error
     public isolated function copyEntry(ArchiveReader sourceArchive, string entryName) returns Error? {
+        check nativeEnsureWriterOpen(self.writer);
         // The name is checked here as well, so that a name this library refuses to extract is not
         // written into a new archive by way of a copy.
         check validateEntryName(entryName);

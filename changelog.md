@@ -9,6 +9,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 
+### Fixed
+
+- [Report a failed write to the target archive in `copyEntry` as a `FileSystemError`](https://github.com/ballerina-platform/ballerina-library/issues/9357)
+- [Return `InvalidArchiveError` from every method of a closed `ArchiveReader` or `ArchiveWriter`, before checking arguments](https://github.com/ballerina-platform/ballerina-library/issues/9356)
+
 ## [1.0.1] - 2026-08-20
 
 - [Reword error messages to name the failed operation before its cause](https://github.com/ballerina-platform/ballerina-library/issues/9026)

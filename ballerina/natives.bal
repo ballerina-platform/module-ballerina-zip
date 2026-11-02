@@ -69,6 +69,12 @@ isolated function nativeExtractEntry(handle archive, int entryIndex, string targ
     'class: "io.ballerina.lib.zip.nativeimpl.Reader"
 } external;
 
+// Gives the `InvalidArchiveError` for a closed archive, or `()` while it is open. Section 4.5 has every
+// method but `close` refuse a closed archive, so this is asked before any argument is checked.
+isolated function nativeEnsureArchiveOpen(handle archive) returns Error? = @java:Method {
+    'class: "io.ballerina.lib.zip.nativeimpl.Reader"
+} external;
+
 isolated function nativeCloseArchive(handle archive) returns Error? = @java:Method {
     'class: "io.ballerina.lib.zip.nativeimpl.Reader"
 } external;
@@ -104,6 +110,12 @@ isolated function nativeFinishEntry(handle writer) returns Error? = @java:Method
 // as it is stored there. The content is never decoded, so an entry this library cannot read is
 // carried across all the same, and the compression of the writer does not apply to it.
 isolated function nativeCopyEntry(handle writer, handle sourceArchive, string entryName) returns Error? = @java:Method {
+    'class: "io.ballerina.lib.zip.nativeimpl.Writer"
+} external;
+
+// Gives the `InvalidArchiveError` for a closed writer, or `()` while it is open. Section 5.4 has every
+// method but `close` refuse a closed writer, so this is asked before any argument is checked.
+isolated function nativeEnsureWriterOpen(handle writer) returns Error? = @java:Method {
     'class: "io.ballerina.lib.zip.nativeimpl.Writer"
 } external;
 
