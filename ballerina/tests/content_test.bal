@@ -63,6 +63,19 @@ isolated function testStreamReadToTheEndNeedsNoClosing() returns error? {
 }
 
 @test:Config {}
+isolated function testStreamKeepsEndingAfterTheEnd() returns error? {
+    ArchiveReader reader = check new (SIMPLE_ARCHIVE);
+    stream<byte[], Error?> content = check reader.readEntry("hello.txt");
+    check from byte[] _ in content do {};
+    test:assertTrue(content.next() is (), "a stream read to the end must keep returning ()");
+    test:assertTrue(content.next() is ());
+    check content.close();
+    test:assertTrue(content.next() is (), "closing a stream read to the end must not make it an error");
+    check reader.close();
+    test:assertTrue(content.next() is (), "closing the archive after the end must not make it an error");
+}
+
+@test:Config {}
 isolated function testStreamOfAClosedArchive() returns error? {
     ArchiveReader reader = check new (SIMPLE_ARCHIVE);
     stream<byte[], Error?> content = check reader.readEntry("data/big.csv");

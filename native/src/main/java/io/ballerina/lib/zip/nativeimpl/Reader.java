@@ -169,6 +169,11 @@ public final class Reader {
 
     public static Object nativeReadChunk(BHandle entryStream, long size) {
         EntryStream stream = (EntryStream) entryStream.getValue();
+        // The end is asked first: reaching it closes the stream to release the read position, and a
+        // caller asking again after the end has done nothing that deserves an error.
+        if (stream.isEnded()) {
+            return null;
+        }
         if (stream.isClosed()) {
             return ZipErrors.invalidArchive("cannot read the entry: the stream is closed");
         }

@@ -31,6 +31,7 @@ final class EntryStream {
     private final ZipArchive archive;
     private final InputStream content;
     private final AtomicBoolean closed = new AtomicBoolean();
+    private volatile boolean ended;
 
     EntryStream(ZipArchive archive, InputStream content) {
         this.archive = archive;
@@ -39,6 +40,10 @@ final class EntryStream {
 
     boolean isClosed() {
         return closed.get();
+    }
+
+    boolean isEnded() {
+        return ended;
     }
 
     /**
@@ -56,6 +61,7 @@ final class EntryStream {
             filled += count;
         }
         if (filled == 0) {
+            ended = true;
             close();
             return null;
         }
