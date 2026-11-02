@@ -727,3 +727,22 @@ isolated function setMode(string path, string mode) returns error? {
         return error("the permissions of the file could not be set");
     }
 }
+
+@test:Config {}
+isolated function testClosedWriterIsReportedBeforeArgumentChecks() returns error? {
+    string work = check file:createTempDir();
+    string emptyDir = check file:joinPath(work, "empty");
+    check file:createDir(emptyDir);
+    string archivePath = check file:joinPath(work, "out.zip");
+
+    ArchiveWriter writer = check new (archivePath, {includeSourceDirectory: false});
+    check writer.close();
+    test:assertTrue(writer.addDirectory(emptyDir) is InvalidArchiveError,
+            "adding an empty directory to a closed writer must not succeed");
+    test:assertTrue(writer.addEntry("../x.txt", [1]) is InvalidArchiveError);
+    test:assertTrue(writer.addFile(archivePath, "../x.txt") is InvalidArchiveError);
+    ArchiveReader sourceArchive = check new (SIMPLE_ARCHIVE);
+    test:assertTrue(writer.copyEntry(sourceArchive, "../x.txt") is InvalidArchiveError);
+    check sourceArchive.close();
+    check file:remove(work, file:RECURSIVE);
+}

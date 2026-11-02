@@ -74,6 +74,10 @@ public final class Writer {
         }
     }
 
+    public static Object nativeEnsureWriterOpen(BHandle writer) {
+        return ((ZipWriter) writer.getValue()).isClosed() ? closedArchive() : null;
+    }
+
     public static Object nativeAddFile(BHandle writer, BString entryName, BString sourcePath) {
         ZipWriter zipWriter = (ZipWriter) writer.getValue();
         if (zipWriter.isClosed()) {

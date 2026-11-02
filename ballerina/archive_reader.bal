@@ -87,6 +87,7 @@ public class ArchiveReader {
     # + return - `()` on success, or an error
     public isolated function extractEntry(string name, string targetPath,
             DecompressOptions options = {}) returns Error? {
+        check nativeEnsureArchiveOpen(self.archive);
         check validateLimits(options.limits);
         int index = check self.indexOf(name);
         Entry entry = check nativeEntryAt(self.archive, index);
@@ -133,6 +134,7 @@ public class ArchiveReader {
     # + options - Options controlling how the archive is extracted
     # + return - `()` on success, or an error
     public isolated function extractAll(string targetPath, DecompressOptions options = {}) returns Error? {
+        check nativeEnsureArchiveOpen(self.archive);
         check validateLimits(options.limits);
         Entry[] entries = check self.entries();
         check createDirectories(targetPath, "");
